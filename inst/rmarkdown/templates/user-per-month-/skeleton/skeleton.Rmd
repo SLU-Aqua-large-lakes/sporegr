@@ -1,0 +1,154 @@
+---
+title: "Användarrapport"
+author: "Spöreg"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+params:
+  anvid: peterguide
+  year_no: 2022
+  month_no: 6
+---
+
+```{r setup, include=FALSE}
+
+# Exakt innehåll kan vi laborera med, men karta, antal resor, deras namn, artfördelning (målart/fångster),
+# längdfördelningar, och kanske något cpue är väl rimligt. Kanske en tidslinje också, eller en tabell med dagar per 
+# månad. Typ max två A4.
+# 
+
+
+
+knitr::opts_chunk$set(echo = TRUE)
+#anvid <- "peterguide"
+#year_no <- 2022
+#month_no <- 6
+anvid <- params$anvid
+year_no <- params$year_no
+month_no <- params$month_no
+
+
+library(dplyr)
+library(ggplot2)
+
+source("R/functions.R")
+
+
+resa_name <- "Spöreg Resa.csv" 
+ovrighandelse_name <- "Spöreg Övrighändelse.csv"
+fangst_name <- "Spöreg Fångst.csv"
+month_str <- sprintf("%02d", month_no)
+
+resa <- read_resa_clean(resa_name)  %>%
+  filter(ANVID == anvid, Year == year_no, Month == month_no)
+resor_uuid <- resa %>%
+  pull(UUID) %>%
+  unique()
+first_date <- min(resa$RESEDATUM)
+last_date <- max(resa$RESEDATUM)
+all_dates <- seq(from = as.Date(first_date), to = as.Date(last_date), by = 1)
+
+ovrighandelse <- read.csv(ovrighandelse_name, fileEncoding = "latin1") %>%
+  filter(SPOREGRESA_UUID %in% resor_uuid)
+
+fangst <- read_fangst_clean(file_name = fangst_name) %>%
+  filter(UUID %in% resor_uuid)
+fangst <- fix_fangst_missing_fangstdattid(fangst, resa)
+have_fangst <- nrow(fangst) > 0
+
+##
+fangst_per_art <- fangst %>%
+  group_by(ARTBEST) %>%
+  summarise(Antal = n(), Längsta = max(LANGD)) %>%
+  rename(Art = ARTBEST)
+##
+fangst_resa <- resa %>%
+  right_join(fangst, by = c("UUID" = "UUID"))
+fangst_date <- fangst_resa %>%
+  group_by(RESEDATUM, ARTBEST) %>%
+  summarise(Antal = n(), .groups = "drop")
+
+## Create plot with catch per day. One panel per species caught
+
+integer_breaks <- function(n = 5, ...) {
+  breaker <- scales::pretty_breaks(n, ...)
+  function(x) {
+     breaks <- breaker(x)
+     breaks[breaks == floor(breaks)]
+  }
+}
+per_date_plot <- ggplot(fangst_date, mapping = aes(x = RESEDATUM, y = Antal, fill = ARTBEST)) +
+  geom_col() +
+  facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+  scale_x_date(date_breaks = "day" , date_labels = "%b-%d", guide = guide_axis(angle = 60)) +
+  scale_y_continuous(breaks = integer_breaks()) +
+  theme(legend.position='none')
+##
+
+## Plot with length distribution per species
+length_dist <- fangst %>%
+  group_by(ARTBEST) %>%
+  mutate(n = n()) %>%
+  filter(n > 20) %>%
+  ggplot(mapping = aes(x = LANGD/10)) +
+  geom_histogram( binwidth = 5) +
+  scale_y_continuous(labels = scales::label_number()) +
+  facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+  xlab("Längd (cm)") +
+  ylab("Antal fiskar")
+
+##
+tot_fangst <- nrow(fangst)
+released_fangst <- fangst %>%
+  filter(ATERUTSATT == "J") %>%
+  summarise(released_fangst = n()) %>%
+  pull(released_fangst)
+
+## Tabell 1. Alla resor och antal fångade målart
+t1 <- resa %>% select(NAMN,RESEDATUM, FANGOMR, MALART, ANTALPERSONER, FISKEMINUTER, UUID)
+t2 <- fangst %>% group_by(UUID, ARTBEST) %>% summarise(Antal = n(), .groups = "drop")
+resa_summary <- t1 %>%
+  left_join(t2, by = c("UUID" = "UUID", "MALART" = "ARTBEST")) %>%
+  select(Resa = NAMN, Datum = RESEDATUM, Målart = MALART, Område = FANGOMR, Personer = ANTALPERSONER,
+         Minuter = FISKEMINUTER, `Fångst (målart)` = Antal)
+
+
+
+```
+
+## Inrapporterat data för användare `r anvid` månad `r month_str`
+Under perioden `r first_date` till `r last_date` har det rapporterats
+`r nrow(resa)` resor. Totalt fångades `r tot_fangst` fiskar.
+
+```{r resa_summary, echo=FALSE}
+cap <- paste0("Alla resor under månad ", month_str, ".")
+knitr::kable(resa_summary, caption = cap)
+```
+## Största fiskar
+
+```{r fangst_per_art, echo=FALSE}
+cap <- "Fångster under perioden. Antal fiskar samt största exemplar"
+knitr::kable(fangst_per_art, caption = cap)
+```
+## Fångster per dag
+
+
+```{r per_date_plot, echo=FALSE}
+if (have_fangst) {
+  print(per_date_plot)
+} else {
+  print("Inga fångster")
+}
+```
+
+
+## Längdfördelning(ar)
+```{r length_dist, echo=FALSE}
+if (have_fangst) {
+  print(length_dist)
+} else {
+  print("Inga fångster")
+}
+```

@@ -72,7 +72,7 @@ fangst_date <- fangst_resa %>%
 
 ## Create plot with catch per day. One panel per species caught
 
-integer_breaks <- function(n = 5, ...) {
+integer_breaks <- function(n = 5, ...) { # Helper function to get nicer scales
   breaker <- scales::pretty_breaks(n, ...)
   function(x) {
      breaks <- breaker(x)

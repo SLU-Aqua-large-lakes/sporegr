@@ -8,6 +8,14 @@
 \description{
 What the package does (one paragraph).
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/kagervall/sporegr}
+  \item Report bugs at \url{https://github.com/kagervall/sporegr/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Anders Kagervall \email{anders.kagervall@slu.se} (\href{https://orcid.org/0000-0003-4790-2696}{ORCID})
 

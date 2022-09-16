@@ -24,6 +24,9 @@ This vignette describes the Rmarkdown templates available in package sporegr.
 It also describes suggested workflows on howto create a (possible) modified
 report for a single user or to generate reports for all users in a single job.
 
+The data to analyze must first be downloaded from ther central sporeg database
+via the APEX interface (https://fd2.slu.se/ords/r/aqua/store100107/home)
+
 ## Available templates
 After installation available templates can be listed:
 ```{r availabe_templates}

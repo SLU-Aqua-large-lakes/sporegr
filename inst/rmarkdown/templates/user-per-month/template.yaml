@@ -1,0 +1,4 @@
+name: Spöreg monthly user report (sporegr)
+description: >
+   Create monthly summary for one Spöreg-user.
+create_dir: FALSE

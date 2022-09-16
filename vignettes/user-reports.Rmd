@@ -1,5 +1,5 @@
 ---
-title: "user-reports"
+title: "Creating reports for the users of Spöreg"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{user-reports}
@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 library(sporegr)
 ```
 
-# Spöreg user reports
+# Spöreg user reports overview
 
 This vignette describes the Rmarkdown templates available in package sporegr.
 It also describes suggested workflows on howto create a (possible) modified
@@ -30,6 +30,15 @@ via the APEX interface (https://fd2.slu.se/ords/r/aqua/store100107/home)
 ## Available templates
 After installation available templates can be listed:
 ```{r availabe_templates}
-rmarkdown::available_templates(package = "smoltregr")
+rmarkdown::available_templates(package = "sporegr")
 ```
+# Single user report. Interactive
+To create a report for a single user for a specific month you create a new .Rmd file
+by going to "File / New File / R Markdown...", from the popup that appear choose "From template"
+and then choose "Spöreg monthly user report (sporegr)".
+
+Save this file in a directory where you have the APEX CSV-files downloaded. In the YAML-header of
+the Rmd file find the "params" block and change "anvid", "year_no" and "month_no" to the desired
+values. Finally format your report by clicking "Knit".
+
 

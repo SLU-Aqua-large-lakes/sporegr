@@ -1,0 +1,32 @@
+---
+title: "user-reports"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{user-reports}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(sporegr)
+```
+
+# Spöreg user reports
+
+This vignette describes the Rmarkdown templates available in package sporegr.
+It also describes suggested workflows on howto create a (possible) modified
+report for a single user or to generate reports for all users in a single job.
+
+## Available templates
+After installation available templates can be listed:
+```{r availabe_templates}
+rmarkdown::available_templates(package = "smoltregr")
+```
+

@@ -19,7 +19,7 @@ params:
 # månad. Typ max två A4.
 # 
 
-
+library(sporegr)
 
 knitr::opts_chunk$set(echo = TRUE)
 #anvid <- "peterguide"

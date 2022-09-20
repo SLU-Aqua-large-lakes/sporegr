@@ -31,12 +31,12 @@ anvid <- params$anvid
 year_no <- params$year_no
 month_no <- params$month_no
 
-resa_name <- "Spöreg Resa.csv" 
+#resa_name <- "Spöreg Resa.csv" 
 ovrighandelse_name <- "Spöreg Övrighändelse.csv"
-fangst_name <- "Spöreg Fångst.csv"
+#fangst_name <- "Spöreg Fångst.csv"
 month_str <- sprintf("%02d", month_no)
 
-resa <- read_resa_clean(resa_name)  %>%
+resa <- read_resa_clean()  %>%
   filter(ANVID == anvid, Year == year_no, Month == month_no)
 resor_uuid <- resa %>%
   pull(UUID) %>%
@@ -48,7 +48,7 @@ all_dates <- seq(from = as.Date(first_date), to = as.Date(last_date), by = 1)
 ovrighandelse <- read.csv(ovrighandelse_name, fileEncoding = "latin1") %>%
   filter(SPOREGRESA_UUID %in% resor_uuid)
 
-fangst <- read_fangst_clean(file_name = fangst_name) %>%
+fangst <- read_fangst_clean() %>%
   filter(UUID %in% resor_uuid)
 fangst <- fix_fangst_missing_fangstdattid(fangst, resa)
 have_fangst <- nrow(fangst) > 0

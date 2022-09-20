@@ -20,6 +20,8 @@ params:
 # 
 
 library(sporegr)
+library(dplyr)
+library(ggplot2)
 
 knitr::opts_chunk$set(echo = TRUE)
 #anvid <- "peterguide"
@@ -28,13 +30,6 @@ knitr::opts_chunk$set(echo = TRUE)
 anvid <- params$anvid
 year_no <- params$year_no
 month_no <- params$month_no
-
-
-library(dplyr)
-library(ggplot2)
-
-source("R/functions.R")
-
 
 resa_name <- "Spöreg Resa.csv" 
 ovrighandelse_name <- "Spöreg Övrighändelse.csv"

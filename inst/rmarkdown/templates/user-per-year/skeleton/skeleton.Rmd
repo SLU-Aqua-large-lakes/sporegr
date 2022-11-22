@@ -1,0 +1,200 @@
+---
+title: "Användarrapport"
+author: "Spöreg"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  pdf_document2: default
+  fig_caption: true
+  html_document: default
+  word_document: default
+params:
+  anvid: peterguide
+  year_no: 2022
+---
+
+\renewcommand{\figurename}{Figur}
+\renewcommand{\tablename}{Tabell}
+\renewcommand{\contentsname}{Innehåll}
+
+
+```{r setup, include=FALSE}
+# setwd("~/sporeg")
+
+library(sporegr)
+library(dplyr)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE)
+#anvid <- "mange"
+#year_no <- 2022
+#month_no <- 8
+anvid <- params$anvid
+year_no <- params$year_no
+
+# Load and prep data...
+resa_name <- "Spöreg Resa.csv" 
+ovrighandelse_name <- "Spöreg Övrighändelse.csv"
+fangst_name <- "Spöreg Fångst.csv"
+
+# ... using functions included in library(sporeg)
+resa <- read_resa_clean(resa_name)  %>% filter(ANVID == anvid, Year == year_no)
+resor_uuid <- resa %>% pull(UUID) %>% unique()
+ovrighandelse <- read.csv(ovrighandelse_name, fileEncoding = "latin1") %>% filter(SPOREGRESA_UUID %in% resor_uuid)
+fangst <- read_fangst_clean(file_name = fangst_name) %>% filter(UUID %in% resor_uuid)
+fangst <- fix_fangst_missing_fangstdattid(fangst, resa)
+have_fangst <- nrow(fangst) > 0
+
+# put together trip and catch
+fangst_resa <- resa %>%
+  right_join(fangst, by = c("UUID" = "UUID"))
+
+# function for nicer plots
+integer_breaks <- function(n = 5, ...) { # Helper function to get nicer scales
+  breaker <- scales::pretty_breaks(n, ...)
+  function(x) {
+     breaks <- breaker(x)
+     breaks[breaks == floor(breaks)]
+  }
+}
+
+## Andel återutsatt behöver beakta både "N" och "J" eftersom default är "NA". 
+# Skip for now. If used later, place below in its own chunk.
+released_fangst <- fangst %>%
+  filter(ATERUTSATT == "J") %>%
+  summarise(released_fangst = n()) %>%
+  pull(released_fangst)
+
+```
+
+## Inrapporterat data för användare `r anvid`  
+
+```{r, prep-inledning, include=F }
+first_date <- min(resa$RESEDATUM)
+last_date <- max(resa$RESEDATUM)
+all_dates <- seq(from = as.Date(first_date), to = as.Date(last_date), by = 1)
+tot_fangst <- nrow(fangst)
+```
+
+Totalt har *`r anvid`* rapporterat `r nrow(resa)` resor och `r tot_fangst` fiskar under perioden `r first_date` till `r last_date`. 
+
+
+
+## Fångst över tid
+
+```{r resa_summary_table, echo=FALSE}
+t1 <- resa %>% select(NAMN,RESEDATUM, FANGOMR, MALART, ANTALPERSONER, FISKEMINUTER, UUID)
+t2 <- fangst %>% group_by(UUID, ARTBEST) %>% summarise(Antal = n(), 
+                                                       MaxLangd = max(LANGD)/10, .groups = "drop")
+## Peterguide kommenterar att medellängd och längsta kan vara bra i tabellen. Testar ersätta cpue med längsta per tur
+ resa_summary <- t1 %>%
+  left_join(t2, by = c("UUID" = "UUID", "MALART" = "ARTBEST")) %>%
+     select(Resa = NAMN, Datum = RESEDATUM, Målart = MALART, Område = FANGOMR, Personer = ANTALPERSONER,
+         Minuter = FISKEMINUTER, `Fångst (målart)` = Antal, `Längsta fisk (cm)` = MaxLangd) %>% 
+     tidyr::replace_na(list(`Fångst (målart)`=0, `Längsta fisk (cm)`=0))
+  #mutate(`Fångstindex (antal per spötimme)` = round(`Fångst (målart)` / (Minuter/60*Personer),2))
+   
+cap <- paste0("Alla resor under perioden")
+knitr::kable(resa_summary, caption = cap)
+```
+
+Fångster över tid beskrivs först som totalt antal fångade fiskar per resa, uppdelat per art (Figur 1). Sen som ett fångstindex beräknat som fångst per ansträngning (Figur 2). Fångst är då beräknat som antal fångade fiskar av målarten och ansträngning som spötimmar (antal personer * antal timmar).
+
+```{r per-date-plot, fig.cap = "Fångst per resa", echo=FALSE, message=F}
+#Create plot with catch per day. One panel per species caught
+per_date_plot <- fangst_resa %>% group_by(RESEDATUM, ARTBEST) %>% summarise(Antal = n(), .groups = "drop") %>% 
+    ggplot(., mapping = aes(x = RESEDATUM, y = Antal, fill = ARTBEST)) +
+          geom_col() +
+          facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+          # date_breaks = "day" kan behöva ändras beroende på periodens längd, tex "2 weeks" eller "1 weeks" är rätt bra för långa serier...
+          scale_x_date(date_breaks = "day" , date_labels = "%b-%d", guide = guide_axis(angle = 60)) +
+          scale_y_continuous(breaks = integer_breaks()) +
+          theme(legend.position='none') + xlab("")
+
+if (have_fangst) {
+  print(per_date_plot)
+} else {
+  print("Inga fångster")
+}
+```
+
+
+```{r cpue-plot, fig.cap="Fångstindex", echo=FALSE, message=F}
+# To look at catch index we need to take MALART and FANGOMR into account
+cpuedata <- fangst_resa %>% filter(MALART==ARTBEST) %>%               
+    group_by(RESEDATUM, FANGOMR, MALART) %>% 
+    summarise(Antal = n(), 
+              Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER),
+              cpue = round(Antal/Effort,2), .groups="drop")
+
+## Plot catch index over time, by target species
+cpue_per_date_plot <- cpuedata %>% 
+    ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
+            geom_line(aes(col=FANGOMR)) + geom_point(size=2, aes(col=FANGOMR)) + 
+            facet_grid(scales = "free_y", rows = vars(MALART)) +
+              # date_breaks kan behöva ändras beroende på periodens längd, tex "2 weeks" är rätt bra för långa serier...
+            scale_x_date(date_breaks = "day" , date_labels = "%b-%d", guide = guide_axis(angle = 60)) +
+            #scale_y_continuous(breaks = integer_breaks()) + 
+            theme(legend.position='bottom') + labs(fill="Område", col="Område") +
+            ylab("Fångstindex (antal per spötimme)") + xlab("")
+
+if (have_fangst) {
+  print(cpue_per_date_plot)
+} else {
+  print("Inga fångster")
+}
+```
+
+
+
+## Längdfördelning(ar)
+
+```{r individ_summary_table, echo=FALSE}
+fangst_per_art <- fangst_resa %>% 
+  group_by(FANGOMR, ARTBEST) %>% 
+  summarise(Antal = n(), 
+            Längsta = max(LANGD),
+            .groups = "drop") %>%
+  rename(Art = ARTBEST,
+         Område = FANGOMR)
+
+cap <- "Totalt antal fiskar samt största exemplar (mm)"
+knitr::kable(fangst_per_art, caption = cap)
+```
+
+```{r echo=FALSE}
+Ngadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda") %>% summarise(N=n()))
+storgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=1000) %>% summarise(N=n()))
+prcntstor <- round(storgadda/Ngadda*100,2)
+mediumgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=750) %>% summarise(N=n()))
+prcntmedium <- round(mediumgadda/Ngadda*100,2)
+```
+
+Av totalt `r Ngadda` rapporterade gäddor var `r storgadda` st över en meter (`r prcntstor` %) och `r mediumgadda` st var över 75 cm (`r prcntmedium` %). 
+
+
+```{r length_dist, echo=FALSE, message=F, fig.cap="Antal fiskar per längdgrupp"}
+length_dist <- fangst %>%
+  group_by(ARTBEST) %>%
+  mutate(n = n()) %>%
+  filter(n > 10) %>%
+  ggplot(mapping = aes(x = LANGD/10)) +
+  geom_histogram( binwidth = 5) +
+  scale_y_continuous(labels = scales::label_number()) +
+  facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+  xlab("Längd (cm)") + ylab("Antal fiskar")
+
+if (have_fangst) {
+  print(length_dist)
+} else {
+  print("Inga fångster")
+}
+```
+
+
+
+
+
+
+
+

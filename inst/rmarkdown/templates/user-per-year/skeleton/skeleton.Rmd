@@ -69,7 +69,7 @@ released_fangst <- fangst %>%
 
 ## Inrapporterat data för användare `r anvid`  
 
-```{r, prep-inledning, include=F }
+```{r prep-inledning, include=F }
 first_date <- min(resa$RESEDATUM)
 last_date <- max(resa$RESEDATUM)
 all_dates <- seq(from = as.Date(first_date), to = as.Date(last_date), by = 1)
@@ -89,8 +89,9 @@ t2 <- fangst %>% group_by(UUID, ARTBEST) %>% summarise(Antal = n(),
 ## Peterguide kommenterar att medellängd och längsta kan vara bra i tabellen. Testar ersätta cpue med längsta per tur
  resa_summary <- t1 %>%
   left_join(t2, by = c("UUID" = "UUID", "MALART" = "ARTBEST")) %>%
-     select(Resa = NAMN, Datum = RESEDATUM, Målart = MALART, Område = FANGOMR, Personer = ANTALPERSONER,
-         Minuter = FISKEMINUTER, `Fångst (målart)` = Antal, `Längsta fisk (cm)` = MaxLangd) %>% 
+     select(Resa = NAMN, Datum = RESEDATUM, Målart = MALART, Område = FANGOMR,
+            Personer = ANTALPERSONER, Minuter = FISKEMINUTER,
+            `Fångst (målart)` = Antal, `Längsta fisk (cm)` = MaxLangd) %>% 
      tidyr::replace_na(list(`Fångst (målart)`=0, `Längsta fisk (cm)`=0))
   #mutate(`Fångstindex (antal per spötimme)` = round(`Fångst (målart)` / (Minuter/60*Personer),2))
    

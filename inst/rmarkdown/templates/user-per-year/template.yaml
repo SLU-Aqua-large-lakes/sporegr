@@ -1,4 +1,4 @@
 name: Spöreg yearly user report (sporegr)
 description: >
-   Create monthly summary for one Spöreg-user.
+   Create yearly summary for one Spöreg-user.
 create_dir: FALSE

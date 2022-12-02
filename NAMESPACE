@@ -3,5 +3,7 @@
 export(fix_fangst_missing_fangstdattid)
 export(read_fangst_clean)
 export(read_resa_clean)
+export(sporeg_bbox)
+export(sporeg_points)
 importFrom(magrittr,"%<>%")
 importFrom(magrittr,"%>%")

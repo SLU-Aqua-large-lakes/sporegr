@@ -42,12 +42,15 @@
   return(res)
 }
 
-#' Read a CSV-file with APEX export of resor from Spöreg database and do some cleanup
+#' Read a file with APEX export of resor from Spöreg database and do some cleanup
+#'
+#' The function uses file extension to select how the file should be read.
+#' Known extensions are .csv and .xlsx.
 #'
 #' @param file_name character Default "Spöreg Resa.csv"
 #'
 #' @return
-#' Return a tibble with all trips in file_name
+#' Return a tibble
 #' @export
 #'
 #' @examples
@@ -55,7 +58,14 @@
 #'   resor <- read_resa_clean()
 #' }
 read_resa_clean <- function(file_name = "Sp\u00f6reg Resa.csv") {
-  res <- utils::read.csv(file_name, fileEncoding = "latin1") %>%
+  fext <- tools::file_ext(file_name)
+  if (!(fext %in% c("csv", "xlsx")))  stop("unknown file type")
+  if (fext == "csv") {
+    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
+  } else if (fext == "xlsx"){
+    rawdata <- readxl::read_excel(file_name)
+  }
+  res <- rawdata %>%
     dplyr::select(-ANV_ID, -SPOREGRESA_APPVERSION, -SPOREGSTOPP_STARTDATTID, - SPOREGSTOPP_STOPDATTID) %>%
     dplyr::rename_with(.fn = .fix_names) %>%
     dplyr::mutate(RESEDATUM = as.Date(RESEDATUM)) %>%
@@ -63,28 +73,78 @@ read_resa_clean <- function(file_name = "Sp\u00f6reg Resa.csv") {
   return(res)
 }
 
-#' Read a CSV-file with APEX export of fångster from Spöreg database and do some cleanup
+#' Read a file with APEX export of Övrighändelse from Spöreg database and do some cleanup
 #'
+#' The function uses file extension to select how the file should be read.
+#' Known extensions are .csv and .xlsx.
+#
+#' @param file_name character Default "Spöreg Övrighändelse.csv"
+#'
+#' @return
+#' Return a tibble
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' ovr <- read_ovrighandelse_clean()
+#' }
+read_ovrighandelse_clean <- function(file_name = "Sp\u00f6reg \u00c5vrigh\u00e4ndelse.csv") {
+  fext <- tools::file_ext(file_name)
+  if (fext == "csv") {
+    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
+  } else if (fext == "xlsx"){
+    rawdata <- readxl::read_excel(file_name) %>%
+      dplyr::mutate(SPOREGOVHAND_STARTDATTID =
+                      base::format(SPOREGOVHAND_STARTDATTID,
+                                   format = "%Y-%m-%d %H:%M")) %>%
+      dplyr::mutate(SPOREGOVHAND_STARTDATTID =
+                      dplyr::if_else(is.na(SPOREGOVHAND_STARTDATTID),
+                                     "",
+                                     SPOREGOVHAND_STARTDATTID))
+  }
+  res <- rawdata %>%
+    dplyr::rename_with(.fn = .fix_names) %>%
+    dplyr::select(UUID, STARTDATTID, ANTAL, POSITIONN, POSITIONE, HANDELSE)
+}
+
+#' Read a file with APEX export of fångster from Spöreg database and do some cleanup
+#'
+#' The function uses file extension to select how the file should be read.
+#' Known extensions are .csv and .xlsx.
+#
 #' @param file_name character Default "Spöreg Fångst.csv"
 #'
 #' @return
-#' Return a tibble with all catches in file_name
+#' Return a tibble
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #' fangst <- read_fangst_clean()
 #' }
-read_fangst_clean <- function(file_name = "Sp\u00f6reg Fångst.csv") {
-  res <- utils::read.csv(file_name, fileEncoding = "latin1") %>%
+read_fangst_clean <- function(file_name = "Sp\u00f6reg F\u00e5ngst.csv") {
+  fext <- tools::file_ext(file_name)
+  if (fext == "csv") {
+    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
+  } else if (fext == "xlsx"){
+    rawdata <- readxl::read_excel(file_name) %>%
+      dplyr::mutate(SPOREGIND_FANGSTDATTID =
+                      base::format(SPOREGIND_FANGSTDATTID,
+                                   format = "%Y-%m-%d %H:%M")) %>%
+      dplyr::mutate(SPOREGIND_FANGSTDATTID =
+                      dplyr::if_else(is.na(SPOREGIND_FANGSTDATTID),
+                                           "",
+                                           SPOREGIND_FANGSTDATTID))
+  }
+  res <- rawdata %>%
     dplyr::rename_with(.fn = .fix_names) %>%
     dplyr::mutate(LANGD = .choose_VALUE(MATTLANGD, ESTLANGD),
            is_est_LANGD = .is_estimated(MATTLANGD, ESTLANGD)) %>%
-#   dplyr::mutate(VIKT = .choose_VALUE(MATTVIKT, ESTVIKT),
-#           is_est_VIKT = .is_estimated(MATTVIKT, ESTVIKT)) %>%
-    dplyr::select(UUID, ARTBEST, FANGSTDATTID, LANGD, is_est_LANGD, ESTVIKT, #VIKT, is_est_VIKT,
-           ATERUTSATT, ODLAD, MARKNING,
-           KLIPPTFENAHOGER, KLIPPTFENAVANSTER, AVVIKELSE, POSITIONN, POSITIONE)
+   dplyr::mutate(VIKT = .choose_VALUE(MATTVIKT, ESTVIKT),
+           is_est_VIKT = .is_estimated(MATTVIKT, ESTVIKT)) %>%
+    dplyr::select(UUID, ARTBEST, FANGSTDATTID, LANGD, is_est_LANGD, ESTVIKT,
+                  VIKT, is_est_VIKT, ATERUTSATT, ODLAD, MARKNING, KLIPPTFENAHOGER,
+                  KLIPPTFENAVANSTER, AVVIKELSE, POSITIONN, POSITIONE)
 }
 
 #' Fix missing datetime on fangster

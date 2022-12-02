@@ -53,14 +53,6 @@ have_fangst <- nrow(fangst) > 0
 fangst_resa <- resa %>%
   right_join(fangst, by = c("UUID" = "UUID"))
 
-# function for nicer plots
-integer_breaks <- function(n = 5, ...) { # Helper function to get nicer scales
-  breaker <- scales::pretty_breaks(n, ...)
-  function(x) {
-     breaks <- breaker(x)
-     breaks[breaks == floor(breaks)]
-  }
-}
 
 ## Andel återutsatt behöver beakta både "N" och "J" eftersom default är "NA". 
 # Skip for now. If used later, place below in its own chunk.
@@ -118,8 +110,9 @@ per_date_plot <- fangst_resa %>% group_by(RESEDATUM, ARTBEST) %>% summarise(Anta
     ggplot(., mapping = aes(x = RESEDATUM, y = Antal, fill = ARTBEST)) +
           geom_col() +
           facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
-          # date_breaks = "day" kan behöva ändras beroende på periodens längd, tex "2 weeks" eller "1 weeks" är rätt bra för långa serier...
-          scale_x_date(date_breaks = "day" , date_labels = "%b-%d", guide = guide_axis(angle = 60)) +
+            # date_breaks måste anpassas till hur många dagar man har, calc_date_breaks() försöker fixa
+            scale_x_date(date_breaks = calc_date_breaks(first_date, last_date) , date_labels = "%b-%d",
+                         guide = guide_axis(angle = 60), expand = c(0, 0)) +
           scale_y_continuous(breaks = integer_breaks()) +
           theme(legend.position='none') + xlab("")
 
@@ -144,8 +137,9 @@ cpue_per_date_plot <- cpuedata %>%
     ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
             geom_line(aes(col=FANGOMR)) + geom_point(size=2, aes(col=FANGOMR)) + 
             facet_grid(scales = "free_y", rows = vars(MALART)) +
-              # date_breaks kan behöva ändras beroende på periodens längd, tex "2 weeks" är rätt bra för långa serier...
-            scale_x_date(date_breaks = "day" , date_labels = "%b-%d", guide = guide_axis(angle = 60)) +
+            # date_breaks måste anpassas till hur många dagar man har, calc_date_breaks() försöker fixa
+            scale_x_date(date_breaks = calc_date_breaks(first_date, last_date) , date_labels = "%b-%d",
+                         guide = guide_axis(angle = 60), expand = c(0, 0)) +
             #scale_y_continuous(breaks = integer_breaks()) + 
             theme(legend.position='bottom') + labs(fill="Område", col="Område") +
             ylab("Fångstindex (antal per spötimme)") + xlab("")

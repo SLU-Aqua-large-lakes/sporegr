@@ -33,14 +33,18 @@ anvid <- params$anvid
 year_no <- params$year_no
 
 # Load and prep data...
-resa_name <- "Spöreg Resa.csv" 
-ovrighandelse_name <- "Spöreg Övrighändelse.csv"
-fangst_name <- "Spöreg Fångst.csv"
+#resa_name <- "Spöreg Resa.csv"
+#ovrighandelse_name <- "Spöreg Övrighändelse.csv"
+#fangst_name <- "Spöreg Fångst.csv"
+resa_name <- "Spöreg Resa.xlsx"
+ovrighandelse_name <- "Spöreg Övrighändelse.xlsx"
+fangst_name <- "Spöreg Fångst.xlsx"
 
 # ... using functions included in library(sporeg)
 resa <- read_resa_clean(resa_name)  %>% filter(ANVID == anvid, Year == year_no)
 resor_uuid <- resa %>% pull(UUID) %>% unique()
-ovrighandelse <- read.csv(ovrighandelse_name, fileEncoding = "latin1") %>% filter(SPOREGRESA_UUID %in% resor_uuid)
+ovrighandelse <- read_ovrighandelse_clean(ovrighandelse_name) %>%
+  filter(UUID %in% resor_uuid)
 fangst <- read_fangst_clean(file_name = fangst_name) %>% filter(UUID %in% resor_uuid)
 fangst <- fix_fangst_missing_fangstdattid(fangst, resa)
 have_fangst <- nrow(fangst) > 0
@@ -78,6 +82,13 @@ tot_fangst <- nrow(fangst)
 
 Totalt har *`r anvid`* rapporterat `r nrow(resa)` resor och `r tot_fangst` fiskar under perioden `r first_date` till `r last_date`. 
 
+```{r map_overview, echo=FALSE, fig.cap="Alla resor under perioden", fig.alt="Karta alla resor"}
+bgmap <- ggmap::get_map(sporeg_bbox(resa), maptype = "hybrid")
+ggmap::ggmap(bgmap) +
+  ggplot2::geom_point(aes(x = POSITIONE, y = POSITIONN), fill = "red", shape = 23,
+                      size = 3, data = resa, show.legend = FALSE)
+
+```
 
 
 ## Fångst över tid

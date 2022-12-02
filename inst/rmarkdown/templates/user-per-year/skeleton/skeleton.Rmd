@@ -53,14 +53,6 @@ have_fangst <- nrow(fangst) > 0
 fangst_resa <- resa %>%
   right_join(fangst, by = c("UUID" = "UUID"))
 
-# function for nicer plots
-integer_breaks <- function(n = 5, ...) { # Helper function to get nicer scales
-  breaker <- scales::pretty_breaks(n, ...)
-  function(x) {
-     breaks <- breaker(x)
-     breaks[breaks == floor(breaks)]
-  }
-}
 
 ## Andel återutsatt behöver beakta både "N" och "J" eftersom default är "NA". 
 # Skip for now. If used later, place below in its own chunk.

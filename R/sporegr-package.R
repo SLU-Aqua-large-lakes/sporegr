@@ -9,7 +9,7 @@
 #' service (\url{https://fd2.slu.se/ords/r/aqua/store100107/home}). Some cleanup
 #' and renaming is done to make the dataset more R friendly.
 #'
-#' \itemize {
+#' \itemize{
 #'  \item \code{\link{read_resa_clean}}:  import data from with trip info (_resor_)
 #'  \item \code{\link{read_fangst_clean}}:  import data from with catches (_fångst_)
 #'  \item \code{\link{read_fangst_ovrighandelse}}:  import data from with misc data

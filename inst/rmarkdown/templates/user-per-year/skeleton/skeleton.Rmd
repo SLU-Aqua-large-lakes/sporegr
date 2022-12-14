@@ -25,7 +25,10 @@ library(sporegr)
 library(dplyr)
 library(ggplot2)
 
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
 #anvid <- "mange"
 #year_no <- 2022
 #month_no <- 8
@@ -65,7 +68,7 @@ released_fangst <- fangst %>%
 
 ## Inrapporterat data för användare `r anvid`  
 
-```{r prep-inledning, include=F }
+```{r prep-inledning}
 first_date <- min(resa$RESEDATUM)
 last_date <- max(resa$RESEDATUM)
 all_dates <- seq(from = as.Date(first_date), to = as.Date(last_date), by = 1)
@@ -74,7 +77,7 @@ tot_fangst <- nrow(fangst)
 
 Totalt har *`r anvid`* rapporterat `r nrow(resa)` resor och `r tot_fangst` fiskar under perioden `r first_date` till `r last_date`. 
 
-```{r map_overview, echo=FALSE, fig.cap="Rapporterad startposition för alla resor under perioden", fig.alt="Karta alla resor"}
+```{r map_overview, fig.cap="Rapporterad startposition för alla resor under perioden", fig.alt="Karta alla resor"}
 bbox <- sporeg_bbox(resa)
 upperleft <- c(bbox["top"], bbox["left"])
 lowerright <- c(bbox["bottom"], bbox["right"])
@@ -96,7 +99,7 @@ print(bgmap)
 
 ## Fångst över tid
 
-```{r resa_summary_table, echo=FALSE}
+```{r resa_summary_table}
 t1 <- resa %>% select(NAMN,RESEDATUM, FANGOMR, MALART, ANTALPERSONER, FISKEMINUTER, UUID)
 t2 <- fangst %>% group_by(UUID, ARTBEST) %>% summarise(Antal = n(), 
                                                        MaxLangd = max(LANGD)/10, .groups = "drop")
@@ -110,14 +113,15 @@ t2 <- fangst %>% group_by(UUID, ARTBEST) %>% summarise(Antal = n(),
   #mutate(`Fångstindex (antal per spötimme)` = round(`Fångst (målart)` / (Minuter/60*Personer),2))
    
 cap <- paste0("Alla resor under perioden")
-kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE, linesep="") %>%
-  kableExtra::kable_styling(latex_options = c( "scale_down", "HOLD_position"))
+kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE, linesep="",
+                longtable = TRUE) %>%
+  kableExtra::kable_styling(latex_options = c("repeat_header", "scale_down", "HOLD_position"))
 #kableExtra::kbl(resa_summary, caption = cap)
 ```
 
 Fångster över tid beskrivs först som totalt antal fångade fiskar per resa, uppdelat per art (Figur 1). Sen som ett fångstindex beräknat som fångst per ansträngning (Figur 2). Fångst är då beräknat som antal fångade fiskar av målarten och ansträngning som spötimmar (antal personer * antal timmar).
 
-```{r per-date-plot, fig.cap = "Fångst per resa", echo=FALSE, message=F}
+```{r per-date-plot, fig.cap = "Fångst per resa"}
 #Create plot with catch per day. One panel per species caught
 per_date_plot <- fangst_resa %>% group_by(RESEDATUM, ARTBEST) %>% summarise(Antal = n(), .groups = "drop") %>% 
     ggplot(., mapping = aes(x = RESEDATUM, y = Antal, fill = ARTBEST)) +
@@ -137,7 +141,7 @@ if (have_fangst) {
 ```
 
 
-```{r cpue-plot, fig.cap="Fångstindex", echo=FALSE, message=F}
+```{r cpue-plot, fig.cap="Fångstindex"}
 # To look at catch index we need to take MALART and FANGOMR into account
 cpuedata <- fangst_resa %>% filter(MALART==ARTBEST) %>%               
     group_by(RESEDATUM, FANGOMR, MALART) %>% 
@@ -168,7 +172,7 @@ if (have_fangst) {
 
 ## Längdfördelning(ar)
 
-```{r individ_summary_table, echo=FALSE}
+```{r individ_summary_table}
 fangst_per_art <- fangst_resa %>% 
   group_by(FANGOMR, ARTBEST) %>% 
   summarise(Antal = n(), 
@@ -178,10 +182,14 @@ fangst_per_art <- fangst_resa %>%
          Område = FANGOMR)
 
 cap <- "Totalt antal fiskar samt största exemplar (mm)"
-knitr::kable(fangst_per_art, caption = cap)
+kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE, linesep="",
+                longtable = TRUE, centering = FALSE) %>%
+  kableExtra::kable_styling(latex_options = c("HOLD_position"), position = "left")
+
+#knitr::kable(fangst_per_art, caption = cap)
 ```
 
-```{r echo=FALSE}
+```{r big_fish}
 Ngadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda") %>% summarise(N=n()))
 storgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=1000) %>% summarise(N=n()))
 prcntstor <- round(storgadda/Ngadda*100,2)
@@ -192,7 +200,7 @@ prcntmedium <- round(mediumgadda/Ngadda*100,2)
 Av totalt `r Ngadda` rapporterade gäddor var `r storgadda` st över en meter (`r prcntstor` %) och `r mediumgadda` st var över 75 cm (`r prcntmedium` %). 
 
 
-```{r length_dist, echo=FALSE, message=F, fig.cap="Antal fiskar per längdgrupp"}
+```{r length_dist, fig.cap="Antal fiskar per längdgrupp"}
 length_dist <- fangst %>%
   group_by(ARTBEST) %>%
   mutate(n = n()) %>%
@@ -209,11 +217,3 @@ if (have_fangst) {
   print("Inga fångster")
 }
 ```
-
-
-
-
-
-
-
-

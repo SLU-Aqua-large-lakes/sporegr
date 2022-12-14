@@ -4,18 +4,18 @@ author: "Spöreg"
 date: "`r Sys.Date()`"
 output:
   pdf_document: default
-  pdf_document2: default
-  fig_caption: true
   html_document: default
   word_document: default
+header-includes: 
+  - \usepackage[labelfont=bf]{caption}
+  - \captionsetup{justification=raggedright,singlelinecheck=false}
+  - \renewcommand{\figurename}{Figur}
+  - \renewcommand{\tablename}{Tabell}
+  - \renewcommand{\contentsname}{Innehåll}
 params:
   anvid: peterguide
   year_no: 2022
 ---
-
-\renewcommand{\figurename}{Figur}
-\renewcommand{\tablename}{Tabell}
-\renewcommand{\contentsname}{Innehåll}
 
 
 ```{r setup, include=FALSE}
@@ -74,11 +74,22 @@ tot_fangst <- nrow(fangst)
 
 Totalt har *`r anvid`* rapporterat `r nrow(resa)` resor och `r tot_fangst` fiskar under perioden `r first_date` till `r last_date`. 
 
-```{r map_overview, echo=FALSE, fig.cap="Alla resor under perioden", fig.alt="Karta alla resor"}
-bgmap <- ggmap::get_map(sporeg_bbox(resa), maptype = "hybrid")
-ggmap::ggmap(bgmap) +
+```{r map_overview, echo=FALSE, fig.cap="Rapporterad startposition för alla resor under perioden", fig.alt="Karta alla resor"}
+bbox <- sporeg_bbox(resa)
+upperleft <- c(bbox["top"], bbox["left"])
+lowerright <- c(bbox["bottom"], bbox["right"])
+map <- OpenStreetMap::openmap(upperleft, lowerright, type="osm")
+bgmap <- RStoolbox::ggRGB(raster::raster(OpenStreetMap::openproj(map)), r = 1, g = 2, b = 3) +
   ggplot2::geom_point(aes(x = POSITIONE, y = POSITIONN), fill = "red", shape = 23,
-                      size = 3, data = resa, show.legend = FALSE)
+                      size = 2, data = resa, show.legend = FALSE) +
+  ggplot2::coord_cartesian()
+print(bgmap)
+
+#bgmap <- ggmap::get_map(sporeg_bbox(resa), maptype = "hybrid")
+#bgmap <- OpenStreetMap::openmap()
+#ggmap::ggmap(bgmap) +
+#  ggplot2::geom_point(aes(x = POSITIONE, y = POSITIONN), fill = "red", shape = 23,
+#                      size = 2, data = resa, show.legend = FALSE)
 
 ```
 
@@ -99,7 +110,9 @@ t2 <- fangst %>% group_by(UUID, ARTBEST) %>% summarise(Antal = n(),
   #mutate(`Fångstindex (antal per spötimme)` = round(`Fångst (målart)` / (Minuter/60*Personer),2))
    
 cap <- paste0("Alla resor under perioden")
-knitr::kable(resa_summary, caption = cap)
+kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE, linesep="") %>%
+  kableExtra::kable_styling(latex_options = c( "scale_down", "HOLD_position"))
+#kableExtra::kbl(resa_summary, caption = cap)
 ```
 
 Fångster över tid beskrivs först som totalt antal fångade fiskar per resa, uppdelat per art (Figur 1). Sen som ett fångstindex beräknat som fångst per ansträngning (Figur 2). Fångst är då beräknat som antal fångade fiskar av målarten och ansträngning som spötimmar (antal personer * antal timmar).

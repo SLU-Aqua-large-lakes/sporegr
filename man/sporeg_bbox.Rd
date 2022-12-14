@@ -4,7 +4,7 @@
 \alias{sporeg_bbox}
 \title{sporeg_bbox}
 \usage{
-sporeg_bbox(x, lat = "POSITIONN", lon = "POSITIONE")
+sporeg_bbox(x, lat = "POSITIONN", lon = "POSITIONE", buffer = 0.01)
 }
 \arguments{
 \item{x}{Data frame containing coordinates}
@@ -12,6 +12,8 @@ sporeg_bbox(x, lat = "POSITIONN", lon = "POSITIONE")
 \item{lat}{character Column name or number containing latitude. Default "POSITIONN"}
 
 \item{lon}{character Column name or number containing longitude. Default "POSITIONE"}
+
+\item{buffer}{numeric the amount to buffer the map in all directions (default = .001)}
 }
 \value{
 Returns a bounding box as a vector of four named numbers. The numbers are named:

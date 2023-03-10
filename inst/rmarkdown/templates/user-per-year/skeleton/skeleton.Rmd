@@ -124,7 +124,9 @@ t2 <- fangst %>%
 ## Peterguide kommenterar att medellängd och längsta kan vara bra i tabellen. Testar ersätta cpue med längsta per tur
  resa_summary <- t1 %>%
   left_join(t2, by = c("UUID" = "UUID", "MALART" = "ARTBEST")) %>%
-     select(Resa = NAMN, Datum = RESEDATUM, Målart = MALART,
+   mutate(Resa =  substr(NAMN, 1, 15)) %>%
+     select(Resa, Datum = RESEDATUM,
+            Målart = MALART,
             Område = FANGOMR, Personer = ANTALPERSONER,
             Minuter = FISKEMINUTER, `Fångst (målart)` = Antal,
             `Längsta fisk (cm)` = MaxLangd) %>% 

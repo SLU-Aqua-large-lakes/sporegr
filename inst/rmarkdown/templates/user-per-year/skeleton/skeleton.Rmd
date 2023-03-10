@@ -8,6 +8,8 @@ output:
   word_document: default
 header-includes: 
   - \usepackage[labelfont=bf]{caption}
+  - \usepackage{longtable}
+  - \usepackage{booktabs}
   - \captionsetup{justification=raggedright,singlelinecheck=false}
   - \renewcommand{\figurename}{Figur}
   - \renewcommand{\tablename}{Tabell}
@@ -72,7 +74,8 @@ released_fangst <- fangst %>%
 ```{r prep-inledning}
 first_date <- min(resa$RESEDATUM)
 last_date <- max(resa$RESEDATUM)
-all_dates <- seq(from = as.Date(first_date), to = as.Date(last_date), by = 1)
+all_dates <- seq(from = as.Date(first_date),
+                 to = as.Date(last_date), by = 1)
 tot_fangst <- nrow(fangst)
 ```
 
@@ -110,22 +113,32 @@ print(bgmap)
 ## Fångst över tid
 
 ```{r resa_summary_table}
-t1 <- resa %>% select(NAMN,RESEDATUM, FANGOMR, MALART, ANTALPERSONER, FISKEMINUTER, UUID)
-t2 <- fangst %>% group_by(UUID, ARTBEST) %>% summarise(Antal = n(), 
-                                                       MaxLangd = max(LANGD)/10, .groups = "drop")
+t1 <- resa %>%
+  select(NAMN,RESEDATUM, FANGOMR, MALART, ANTALPERSONER,
+         FISKEMINUTER, UUID)
+t2 <- fangst %>%
+  group_by(UUID, ARTBEST) %>%
+  summarise(Antal = n(),
+            MaxLangd = max(LANGD)/10,
+            .groups = "drop")
 ## Peterguide kommenterar att medellängd och längsta kan vara bra i tabellen. Testar ersätta cpue med längsta per tur
  resa_summary <- t1 %>%
   left_join(t2, by = c("UUID" = "UUID", "MALART" = "ARTBEST")) %>%
-     select(Resa = NAMN, Datum = RESEDATUM, Målart = MALART, Område = FANGOMR,
-            Personer = ANTALPERSONER, Minuter = FISKEMINUTER,
-            `Fångst (målart)` = Antal, `Längsta fisk (cm)` = MaxLangd) %>% 
-     tidyr::replace_na(list(`Fångst (målart)`=0, `Längsta fisk (cm)`=0))
+     select(Resa = NAMN, Datum = RESEDATUM, Målart = MALART,
+            Område = FANGOMR, Personer = ANTALPERSONER,
+            Minuter = FISKEMINUTER, `Fångst (målart)` = Antal,
+            `Längsta fisk (cm)` = MaxLangd) %>% 
+     tidyr::replace_na(list(`Fångst (målart)`= 0,
+                            `Längsta fisk (cm)`=0))
   #mutate(`Fångstindex (antal per spötimme)` = round(`Fångst (målart)` / (Minuter/60*Personer),2))
    
 cap <- paste0("Alla resor under perioden")
-kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE, linesep="",
+kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
+                linesep="",
                 longtable = TRUE) %>%
-  kableExtra::kable_styling(latex_options = c("repeat_header", "scale_down", "HOLD_position"))
+  kableExtra::kable_styling(
+    latex_options = c("repeat_header", "scale_down", 
+                      "HOLD_position"))
 #kableExtra::kbl(resa_summary, caption = cap)
 ```
 
@@ -133,15 +146,21 @@ Fångster över tid beskrivs först som totalt antal fångade fiskar per resa, u
 
 ```{r per-date-plot, fig.cap = "Fångst per resa"}
 #Create plot with catch per day. One panel per species caught
-per_date_plot <- fangst_resa %>% group_by(RESEDATUM, ARTBEST) %>% summarise(Antal = n(), .groups = "drop") %>% 
-    ggplot(., mapping = aes(x = RESEDATUM, y = Antal, fill = ARTBEST)) +
-          geom_col() +
-          facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
-            # date_breaks måste anpassas till hur många dagar man har, calc_date_breaks() försöker fixa
-            scale_x_date(date_breaks = calc_date_breaks(first_date, last_date) , date_labels = "%b-%d",
-                         guide = guide_axis(angle = 60), expand = c(0, 0)) +
-          scale_y_continuous(breaks = integer_breaks()) +
-          theme(legend.position='none') + xlab("")
+per_date_plot <- fangst_resa %>%
+  group_by(RESEDATUM, ARTBEST) %>%
+  summarise(Antal = n(), .groups = "drop") %>% 
+  ggplot(., mapping = aes(x = RESEDATUM, y = Antal,
+                          fill = ARTBEST)) +
+  geom_col() +
+  facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+  ## date_breaks måste anpassas till hur många dagar man har,
+  ## calc_date_breaks() försöker fixa
+  scale_x_date(date_breaks = 
+                 calc_date_breaks(first_date, last_date),
+               date_labels = "%b-%d",
+               guide = guide_axis(angle = 60), expand = c(0, 0)) +
+  scale_y_continuous(breaks = integer_breaks()) +
+  theme(legend.position='none') + xlab("")
 
 if (have_fangst) {
   print(per_date_plot)
@@ -153,23 +172,29 @@ if (have_fangst) {
 
 ```{r cpue-plot, fig.cap="Fångstindex"}
 # To look at catch index we need to take MALART and FANGOMR into account
-cpuedata <- fangst_resa %>% filter(MALART==ARTBEST) %>%               
-    group_by(RESEDATUM, FANGOMR, MALART) %>% 
-    summarise(Antal = n(), 
-              Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER),
-              cpue = round(Antal/Effort,2), .groups="drop")
+cpuedata <- fangst_resa %>% filter(MALART==ARTBEST) %>%
+  group_by(RESEDATUM, FANGOMR, MALART) %>%
+  summarise(Antal = n(), 
+            Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER),
+            cpue = round(Antal/Effort,2), .groups="drop")
 
 ## Plot catch index over time, by target species
-cpue_per_date_plot <- cpuedata %>% 
-    ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
-            geom_line(aes(col=FANGOMR)) + geom_point(size=2, aes(col=FANGOMR)) + 
-            facet_grid(scales = "free_y", rows = vars(MALART)) +
-            # date_breaks måste anpassas till hur många dagar man har, calc_date_breaks() försöker fixa
-            scale_x_date(date_breaks = calc_date_breaks(first_date, last_date) , date_labels = "%b-%d",
-                         guide = guide_axis(angle = 60), expand = c(0, 0)) +
-            #scale_y_continuous(breaks = integer_breaks()) + 
-            theme(legend.position='bottom') + labs(fill="Område", col="Område") +
-            ylab("Fångstindex (antal per spötimme)") + xlab("")
+cpue_per_date_plot <- cpuedata %>%
+  ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
+  geom_line(aes(col=FANGOMR)) +
+  geom_point(size=2, aes(col=FANGOMR)) + 
+  facet_grid(scales = "free_y", rows = vars(MALART)) +
+  ## date_breaks måste anpassas till hur många dagar man har,
+  ##calc_date_breaks() försöker fixa
+  scale_x_date(date_breaks =
+                 calc_date_breaks(first_date, last_date) ,
+               date_labels = "%b-%d",
+               guide = guide_axis(angle = 60), expand = c(0, 0)) +
+  #scale_y_continuous(breaks = integer_breaks()) +
+  theme(legend.position='bottom') +
+  labs(fill="Område",
+       col="Område") +
+  ylab("Fångstindex (antal per spötimme)") + xlab("")
 
 if (have_fangst) {
   print(cpue_per_date_plot)
@@ -192,9 +217,11 @@ fangst_per_art <- fangst_resa %>%
          Område = FANGOMR)
 
 cap <- "Totalt antal fiskar samt största exemplar (mm)"
-kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE, linesep="",
-                longtable = TRUE, centering = FALSE) %>%
-  kableExtra::kable_styling(latex_options = c("HOLD_position"), position = "left")
+kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
+                linesep="", longtable = TRUE,
+                centering = FALSE) %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position"), position = "left")
 
 #knitr::kable(fangst_per_art, caption = cap)
 ```

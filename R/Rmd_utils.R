@@ -40,5 +40,7 @@ calc_date_breaks <- function(first_date, last_date) {
   days_between <- floor(as.integer(
     diff(range(c(as.Date(first_date), as.Date(last_date))))) / 15
   )
+  if (days_between < 1)
+    days_between <- 1
   return(paste0(days_between, " days"))
 }

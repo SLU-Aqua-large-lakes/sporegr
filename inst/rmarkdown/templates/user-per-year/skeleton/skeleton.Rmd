@@ -24,6 +24,7 @@ params:
 library(sporegr)
 library(dplyr)
 library(ggplot2)
+library(rJava)
 
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
@@ -81,10 +82,19 @@ Totalt har *`r anvid`* rapporterat `r nrow(resa)` resor och `r tot_fangst` fiska
 bbox <- sporeg_bbox(resa)
 upperleft <- c(bbox["top"], bbox["left"])
 lowerright <- c(bbox["bottom"], bbox["right"])
-map <- OpenStreetMap::openmap(upperleft, lowerright, type="osm")
-bgmap <- RStoolbox::ggRGB(raster::raster(OpenStreetMap::openproj(map)), r = 1, g = 2, b = 3) +
-  ggplot2::geom_point(aes(x = POSITIONE, y = POSITIONN), fill = "red", shape = 23,
-                      size = 2, data = resa, show.legend = FALSE) +
+map_os <- OpenStreetMap::openproj(
+  OpenStreetMap::openmap(upperleft, lowerright, type="osm"),
+  projection = "EPSG:4326")
+
+map <-  raster::raster(map_os)
+bgmap <- ggplot2::ggplot() +
+  terrainr::geom_spatial_rgb(
+    data = map,
+    aes(x = x, y = y, r = red, g = green, b = blue)) +
+  ggplot2::geom_point(data = resa, 
+    aes(x = POSITIONE, y = POSITIONN),
+    fill = "red", shape = 23,
+    size = 2, show.legend = FALSE) +
   ggplot2::coord_cartesian()
 print(bgmap)
 

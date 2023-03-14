@@ -246,10 +246,11 @@ length_dist <- fangst %>%
   mutate(n = n()) %>%
   filter(n > 10) %>%
   ggplot(mapping = aes(x = LANGD/10)) +
-  geom_histogram( binwidth = 5) +
-  scale_y_continuous(labels = scales::label_number()) +
+  geom_histogram( binwidth = 2.5, boundary=0, closed="left", fill="gray80",color="black") +
+  scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
   facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
-  xlab("Längd (cm)") + ylab("Antal fiskar")
+  xlab("Längd (cm)") + ylab("Antal fiskar") +
+  theme_bw()
 
 if (have_fangst) {
   print(length_dist)

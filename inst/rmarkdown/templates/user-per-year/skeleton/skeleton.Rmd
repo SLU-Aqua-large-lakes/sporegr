@@ -82,7 +82,7 @@ tot_fangst <- nrow(fangst)
 Totalt har *`r anvid`* rapporterat `r nrow(resa)` resor och `r tot_fangst` fiskar under perioden `r first_date` till `r last_date`. 
 
 ```{r map_overview, fig.cap="Rapporterad startposition för alla resor under perioden", fig.alt="Karta alla resor"}
-bbox <- sporeg_bbox(resa)
+bbox <- sporeg_bbox(resa) 
 upperleft <- c(bbox["top"], bbox["left"])
 lowerright <- c(bbox["bottom"], bbox["right"])
 map_os <- OpenStreetMap::openproj(
@@ -98,6 +98,7 @@ bgmap <- ggplot2::ggplot() +
     aes(x = POSITIONE, y = POSITIONN),
     fill = "red", shape = 23,
     size = 2, show.legend = FALSE) +
+   ggplot2::theme_bw() +
   ggplot2::coord_cartesian()
 print(bgmap)
 

@@ -7,14 +7,14 @@
 #' @param x Data frame containing coordinates
 #' @param lat character Column name or number containing latitude. Default "POSITIONN"
 #' @param lon character Column name or number containing longitude. Default "POSITIONE"
-#' @param buffer numeric the amount to buffer the map in all directions (default = .001)
+#' @param buffer numeric the amount to buffer the map in all directions (default = .05)
 #'
 #' @return
 #' Returns a bounding box as a vector of four named numbers. The numbers are named:
 #' "left", "bottom", "right", and "top". This is the format used by ggmap::get_map()
 #' @export
 #'
-sporeg_bbox <- function(x, lat = "POSITIONN", lon = "POSITIONE", buffer = .01) {
+sporeg_bbox <- function(x, lat = "POSITIONN", lon = "POSITIONE", buffer = .05) {
     res <- c(left = min(x[, lon] - buffer),
              bottom = min(x[, lat] - buffer),
              right = max(x[, lon] + buffer),

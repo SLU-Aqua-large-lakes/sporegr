@@ -99,10 +99,10 @@ map_os <- OpenStreetMap::openproj(
   OpenStreetMap::openmap(upperleft, lowerright, type="osm"),
   projection = "EPSG:4326")
 
-map <-  raster::raster(map_os)
-bgmap <- ggplot2::ggplot() +
+bgmap <-  raster::raster(map_os)
+map <- ggplot2::ggplot() +
   terrainr::geom_spatial_rgb(
-    data = map,
+    data = bgmap,
     aes(x = x, y = y, r = red, g = green, b = blue)) +
   ggplot2::geom_point(data = resa, 
     aes(x = POSITIONE, y = POSITIONN),
@@ -110,14 +110,7 @@ bgmap <- ggplot2::ggplot() +
     size = 2, show.legend = FALSE) +
    ggplot2::theme_bw() +
   ggplot2::coord_cartesian()
-print(bgmap)
-
-#bgmap <- ggmap::get_map(sporeg_bbox(resa), maptype = "hybrid")
-#bgmap <- OpenStreetMap::openmap()
-#ggmap::ggmap(bgmap) +
-#  ggplot2::geom_point(aes(x = POSITIONE, y = POSITIONN), fill = "red", shape = 23,
-#                      size = 2, data = resa, show.legend = FALSE)
-
+print(map)
 ```
 
 
@@ -153,6 +146,24 @@ kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
 #kableExtra::kbl(resa_summary, caption = cap)
 ```
 
+```{r individ_summary_table}
+fangst_per_art <- fangst_resa %>% 
+  group_by(FANGOMR, ARTBEST) %>% 
+  summarise(Antal = n(), 
+            Längsta = max(LANGD),
+            .groups = "drop") %>%
+  rename(Art = ARTBEST,
+         Område = FANGOMR)
+
+cap <- "Totalt antal fiskar samt största exemplar (mm)"
+kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
+                linesep="", longtable = TRUE,
+                centering = FALSE) %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position"), position = "left")
+
+#knitr::kable(fangst_per_art, caption = cap)
+```
 
 ```{r per-date-plot, fig.cap = "Fångst per resa"}
 #Create plot with catch per day. One panel per species caught
@@ -160,7 +171,7 @@ per_date_plot <- fangst_resa %>%
   group_by(RESEDATUM, ARTBEST) %>%
   summarise(Antal = n(), .groups = "drop") %>% 
   ggplot(.) +
-  geom_col(mapping = aes(x = RESEDATUM, y = Antal, fill="grey80")) +
+  geom_col(mapping = aes(x = RESEDATUM, y = Antal), fill="gray80", color="black") +
   facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
   ## date_breaks måste anpassas till hur många dagar man har,
   ## calc_date_breaks() försöker fixa
@@ -192,8 +203,8 @@ cpuedata <- fangst_resa %>% filter(MALART==ARTBEST) %>%
 ## Plot catch index over time, by target species
 cpue_per_date_plot <- cpuedata %>%
   ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
-  geom_line(aes(col=FANGOMR)) +
-  geom_point(size=2, aes(col=FANGOMR)) + 
+  geom_line(aes(col=FANGOMR), alpha = .5) +
+  geom_point(size=2, aes(col=FANGOMR), alpha = .8) + 
   facet_grid(scales = "free_y", rows = vars(MALART)) +
   ## date_breaks måste anpassas till hur många dagar man har,
   ##calc_date_breaks() försöker fixa
@@ -216,24 +227,7 @@ if (have_fangst) {
 }
 ```
 
-```{r individ_summary_table}
-fangst_per_art <- fangst_resa %>% 
-  group_by(FANGOMR, ARTBEST) %>% 
-  summarise(Antal = n(), 
-            Längsta = max(LANGD),
-            .groups = "drop") %>%
-  rename(Art = ARTBEST,
-         Område = FANGOMR)
 
-cap <- "Totalt antal fiskar samt största exemplar (mm)"
-kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
-                linesep="", longtable = TRUE,
-                centering = FALSE) %>%
-  kableExtra::kable_styling(
-    latex_options = c("HOLD_position"), position = "left")
-
-#knitr::kable(fangst_per_art, caption = cap)
-```
 
 
 ```{r length_dist, fig.cap="Antal fiskar per längdgrupp"}

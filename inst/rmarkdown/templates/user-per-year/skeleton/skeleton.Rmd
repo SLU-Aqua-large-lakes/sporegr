@@ -123,7 +123,7 @@ t2 <- fangst %>%
   summarise(Antal = n(),
             MaxLangd = max(LANGD)/10,
             .groups = "drop")
-## Peterguide kommenterar att medellängd och längsta kan vara bra i tabellen. Testar ersätta cpue med längsta per tur
+
  resa_summary <- t1 %>%
   left_join(t2, by = c("UUID" = "UUID", "MALART" = "ARTBEST")) %>%
    mutate(Resa =  substr(NAMN, 1, 15)) %>%

@@ -15,8 +15,8 @@ header-includes:
   - \renewcommand{\tablename}{Tabell}
   - \renewcommand{\contentsname}{Innehåll}
 params:
-  anvid: peterguide
-  year_no: 2022
+  anvid: gorsun
+  year_no: 2023
 ---
 
 
@@ -56,6 +56,14 @@ fangst <- read_fangst_clean(file_name = fangst_name) %>% filter(UUID %in% resor_
 fangst <- fix_fangst_missing_fangstdattid(fangst, resa)
 have_fangst <- nrow(fangst) > 0
 
+## Create a table of trips with zero catch
+zero_trips <- resa %>%
+  select(UUID, RESEDATUM, ARTBEST = MALART) %>%
+  left_join(fangst %>% group_by(UUID) %>% summarise(Antal = n())) %>%
+  filter(is.na(Antal)) %>%
+  mutate(Antal = 0) %>%
+  select(-UUID)
+
 # put together trip and catch
 fangst_resa <- resa %>%
   right_join(fangst, by = c("UUID" = "UUID"))
@@ -77,6 +85,7 @@ first_date <- min(resa$RESEDATUM)
 last_date <- max(resa$RESEDATUM)
 all_dates <- seq(from = as.Date(first_date),
                  to = as.Date(last_date), by = 1)
+trip_dates <- format(unique(sort(resa$RESEDATUM)), "%b-%d") # Sorted date labels used to construct factors later
 tot_fangst <- nrow(fangst)
 Ngadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda") %>% summarise(N=n()))
 storgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=1000) %>% summarise(N=n()))
@@ -135,7 +144,7 @@ t2 <- fangst %>%
      tidyr::replace_na(list(`Fångst (målart)`= 0,
                             `Längsta fisk (cm)`=0))
   #mutate(`Fångstindex (antal per spötimme)` = round(`Fångst (målart)` / (Minuter/60*Personer),2))
-   
+
 cap <- paste0("Alla resor under perioden")
 kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
                 linesep="",
@@ -167,18 +176,29 @@ kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
 
 ```{r per-date-plot, fig.cap = "Fångst per resa"}
 #Create plot with catch per day. One panel per species caught
+calc_discrete_breaks <- function(x, max_breaks = 30) {
+  mb <- min(length(x), max_breaks)
+  res <- x[seq(from = 1, to = length(x), by = floor(length(x) / mb))]
+  return(res)
+}
+
 per_date_plot <- fangst_resa %>%
   group_by(RESEDATUM, ARTBEST) %>%
   summarise(Antal = n(), .groups = "drop") %>% 
+  bind_rows(zero_trips) %>%
+  arrange(RESEDATUM) %>%
+  mutate(Date = factor(format(RESEDATUM, "%b-%d"), levels = trip_dates, ordered = TRUE)) %>%
   ggplot(.) +
-  geom_col(mapping = aes(x = RESEDATUM, y = Antal), fill="gray80", color="black") +
+  geom_col(mapping = aes(x = Date, y = Antal), fill="gray80", color="black") +
   facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+  scale_x_discrete(breaks = calc_discrete_breaks(trip_dates),
+                   guide = guide_axis(angle = 60)) +
   ## date_breaks måste anpassas till hur många dagar man har,
   ## calc_date_breaks() försöker fixa
-  scale_x_date(date_breaks = 
-                 calc_date_breaks(first_date, last_date),
-               date_labels = "%b-%d",
-               guide = guide_axis(angle = 60), expand = c(0, 0)) +
+##  scale_x_date(date_breaks = 
+##                 calc_date_breaks(first_date, last_date),
+##               date_labels = "%b-%d",
+##               guide = guide_axis(angle = 60), expand = c(0, 0)) +
   scale_y_continuous(breaks = integer_breaks()) +
   theme_bw() +
   theme(legend.position = "none") +

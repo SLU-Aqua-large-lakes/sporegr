@@ -59,9 +59,10 @@ have_fangst <- nrow(fangst) > 0
 ## Create a table of trips with zero catch
 zero_trips <- resa %>%
   select(UUID, FANGOMR, RESEDATUM, MALART, FISKEMINUTER, ANTALPERSONER) %>%
+    mutate(Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER)) %>%
   left_join(fangst %>% group_by(UUID) %>% summarise(Antal = n())) %>%
   filter(is.na(Antal)) %>%
-  mutate(Antal = 0, Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER), cpue = 0) %>%
+  mutate(Antal = 0, cpue = 0) %>%
   select(-UUID, -FISKEMINUTER, -ANTALPERSONER)
 
 # put together trip and catch

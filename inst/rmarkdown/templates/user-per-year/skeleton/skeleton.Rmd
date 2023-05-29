@@ -256,17 +256,17 @@ if (have_fangst) {
 length_dist <- fangst %>%
   group_by(ARTBEST) %>%
   mutate(n = n()) %>%
-  filter(n > 10) %>%
-  ggplot(mapping = aes(x = LANGD/10)) +
-  geom_histogram( binwidth = 2.5, boundary=0, closed="left", fill="gray80",color="black") +
-  scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
-  facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
-  xlab("Längd (cm)") + ylab("Antal fiskar") +
-  theme_bw()
-
-if (have_fangst) {
-  print(length_dist)
+  filter(n > 10)
+  
+if (nrow(length_dist) > 0) {
+  length_plot <- ggplot(data = length_dist, mapping = aes(x = LANGD/10)) +
+    geom_histogram( binwidth = 2.5, boundary=0, closed="left", fill="gray80",color="black") +
+    scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+    xlab("Längd (cm)") + ylab("Antal fiskar") +
+    theme_bw()
+  print(length_plot)
 } else {
-  print("Inga fångster")
+  print("För få fångster för att plotta längddistribution")
 }
 ```

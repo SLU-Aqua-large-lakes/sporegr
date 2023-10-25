@@ -3,13 +3,15 @@
 
 #' Clean column names (internal)
 #'
+#' Cleanup column names by removing of the prefix before the first "_".
+#'
 #' @param x
 #'
 #' @return character
 #' @noRd
 #'
 .fix_names <- function(x) {
-  x[x == "FANGOMR_NAMN"] <- "FANGOMR"
+  x[x == "FANGOMR_NAMN"] <- "FANGOMR" # Hardcoded fix to not get duplicated name "NAMN"
   x[x == "ARTBEST_NAMN"] <- "ARTBEST"
   x <-  stringr::str_split(x, pattern = '_', simplify = TRUE)
   x[ ,2] <- ifelse(x[ ,2] == "", x[ ,1], x[ ,2])

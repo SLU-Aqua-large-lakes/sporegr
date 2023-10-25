@@ -99,10 +99,15 @@ read_fangst_clean <- function(file_name = "Sp\u00f6reg F\u00e5ngst.csv") {
            is_est_LANGD = .is_estimated(MATTLANGD, ESTLANGD)) %>%
    dplyr::mutate(VIKT = .choose_VALUE(MATTVIKT, ESTVIKT),
            is_est_VIKT = .is_estimated(MATTVIKT, ESTVIKT)) %>%
-    dplyr::select(UUID, ARTBEST, FANGSTDATTID, LANGD, is_est_LANGD, ESTVIKT,
+    dplyr::select(UUID, ARTBEST, FANGSTDATTID, LANGD, is_est_LANGD,
                   VIKT, is_est_VIKT, ATERUTSATT, ODLAD, MARKNING, KLIPPTFENAHOGER,
-                  KLIPPTFENAVANSTER, AVVIKELSE, POSITIONN, POSITIONE)
-}
+                  KLIPPTFENAVANSTER, AVVIKELSE, POSITIONN, POSITIONE) %>%
+    dplyr::mutate(Year = lubridate::year(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
+                  Month = lubridate::month(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
+                  Day = lubridate::day(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
+                  Quarter = lubridate::quarter(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")))
+  return(res)
+  }
 
 #' Fix missing datetime on fangster
 #'

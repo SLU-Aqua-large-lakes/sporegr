@@ -18,5 +18,5 @@ Returns a sf multipoint object.
 }
 \description{
 Create an sf-multipoint from a data frame. The data must contain two columns that
-contains coordinates
+contains coordinates. Rows with NA in coordinates will be dropped silently.
 }

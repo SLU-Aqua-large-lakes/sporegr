@@ -15,6 +15,9 @@
 #' @export
 #'
 sporeg_bbox <- function(x, lat = "POSITIONN", lon = "POSITIONE", buffer = .05) {
+    x <- x %>%
+      dplyr::filter(!is.na(!!as.symbol(lat))) %>%
+      dplyr::filter(!is.na(!!as.symbol(lon)))
     res <- c(left = min(x[, lon] - buffer),
              bottom = min(x[, lat] - buffer),
              right = max(x[, lon] + buffer),

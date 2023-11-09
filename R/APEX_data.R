@@ -1,11 +1,51 @@
+##
+## This file contains code needed to read and process Spöreg data exported
+## from Oracle with the APEX interface.
+##
+
+## APEX options ##################################################################################
+# Variable, global to package's namespace.
+# This function is not exported to user space and does not need to be documented.
+OPTIONS <- settings::options_manager(
+  root_folder = "//storage-dh.slu.se/restricted$/Stora sjoarna/Data/Fritidsfiskedata/Spöreg",
+  resa = "Spöreg Resa.xlsx",
+  fangst = "Spöreg Fångst.xlsx",
+  ovrighandelse = "Spöreg Övrighändelse.xlsx")
+
+
+
+# User function that gets exported:
+
+#' Set or get options for reading APEX Spöreg data
+#'
+#' @param ... Option names to retrieve option values or \code{[key]=[value]} pairs to set options.
+#'
+#' @section Supported options:
+#' The following options are supported
+#' \itemize{
+#'  \item{\code{root_folder} Datafiles root (Default: //storage-dh.slu.se/restricted$/Stora sjoarna/Data/Fritidsfiskedata/Spöreg)}
+#'  \item{\code{resa} File with trip occasions (Default: Spöreg Resa.xlsx)}
+#'  \item{\code{fangst} File with catch/recatch data (Default: Spöreg Resa.xlsx)}
+#'  \item{\code{ovrighandelse} File with misc events (Default: Spöreg Övrighändelse.xlsx)}
+#' }
+#'
+#' @export
+APEX_options <- function(...){
+  # protect against the use of reserved words.
+  settings::stop_if_reserved(...)
+  OPTIONS(...)
+}
+
+## Data readers ##############################################################################################
+
 
 #' Read a file with APEX export of resor from Spöreg database and do some cleanup
 #'
+#' The location of the file read is predefined with but can be changed with
+#' the function ?APEX_options().
 #' The function uses file extension to select how the file should be read.
 #' Known extensions are .csv and .xlsx.
-#'
-#' @param file_name character Default "Spöreg Resa.csv"
-#'
+#'#'
 #' @return
 #' Return a tibble
 #' @export
@@ -14,8 +54,9 @@
 #' \dontrun{
 #'   resor <- read_resa_clean()
 #' }
-read_resa_clean <- function(file_name = "Sp\u00f6reg Resa.csv") {
-  fext <- tools::file_ext(file_name)
+read_resa_clean <- function() {
+  file_name <- file.path(APEX_options()$root_folder, APEX_options()$resa)
+    fext <- tools::file_ext(file_name)
   if (!(fext %in% c("csv", "xlsx")))  stop("unknown file type")
   if (fext == "csv") {
     rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
@@ -34,8 +75,6 @@ read_resa_clean <- function(file_name = "Sp\u00f6reg Resa.csv") {
 #'
 #' The function uses file extension to select how the file should be read.
 #' Known extensions are .csv and .xlsx.
-#
-#' @param file_name character Default "Spöreg Övrighändelse.csv"
 #'
 #' @return
 #' Return a tibble
@@ -45,7 +84,8 @@ read_resa_clean <- function(file_name = "Sp\u00f6reg Resa.csv") {
 #' \dontrun{
 #' ovr <- read_ovrighandelse_clean()
 #' }
-read_ovrighandelse_clean <- function(file_name = "Sp\u00f6reg \u00c5vrigh\u00e4ndelse.csv") {
+read_ovrighandelse_clean <- function() {
+  file_name <- file.path(APEX_options()$root_folder, APEX_options()$ovrighandelse)
   fext <- tools::file_ext(file_name)
   if (fext == "csv") {
     rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
@@ -68,8 +108,6 @@ read_ovrighandelse_clean <- function(file_name = "Sp\u00f6reg \u00c5vrigh\u00e4n
 #'
 #' The function uses file extension to select how the file should be read.
 #' Known extensions are .csv and .xlsx.
-#
-#' @param file_name character Default "Spöreg Fångst.csv"
 #'
 #' @return
 #' Return a tibble
@@ -79,7 +117,8 @@ read_ovrighandelse_clean <- function(file_name = "Sp\u00f6reg \u00c5vrigh\u00e4n
 #' \dontrun{
 #' fangst <- read_fangst_clean()
 #' }
-read_fangst_clean <- function(file_name = "Sp\u00f6reg F\u00e5ngst.csv") {
+read_fangst_clean <- function() {
+  file_name <- file.path(APEX_options()$root_folder, APEX_options()$fangst)
   fext <- tools::file_ext(file_name)
   if (fext == "csv") {
     rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")

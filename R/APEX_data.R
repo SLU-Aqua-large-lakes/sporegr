@@ -10,7 +10,8 @@ OPTIONS <- settings::options_manager(
   root_folder = "//storage-dh.slu.se/restricted$/Stora sjoarna/Data/Fritidsfiskedata/Spöreg",
   resa = "Spöreg Resa.xlsx",
   fangst = "Spöreg Fångst.xlsx",
-  ovrighandelse = "Spöreg Övrighändelse.xlsx")
+  ovrighandelse = "Spöreg Övrighändelse.xlsx",
+  anvlista = "anvlista.xlsx")
 
 
 
@@ -27,6 +28,7 @@ OPTIONS <- settings::options_manager(
 #'  \item{\code{resa} File with trip occasions (Default: Spöreg Resa.xlsx)}
 #'  \item{\code{fangst} File with catch/recatch data (Default: Spöreg Resa.xlsx)}
 #'  \item{\code{ovrighandelse} File with misc events (Default: Spöreg Övrighändelse.xlsx)}
+#'  \item{\code{anvlista} File with username, full name and organisation (Default: anvlista.xlsx)}
 #' }
 #'
 #' @export
@@ -171,4 +173,33 @@ fix_fangst_missing_fangstdattid <- function(f, r){
     dplyr::mutate(FANGSTDATTID = dplyr::if_else(FANGSTDATTID == "", rdate, FANGSTDATTID)) %>%
     dplyr::select(-rdate)
   return(fixed_fangst)
+}
+
+
+#' Read a file with registered sporeg users
+#'
+#' The location of the file read is predefined with but can be changed with
+#' the function ?APEX_options().
+#' The function uses file extension to select how the file should be read.
+#' Known extensions are .csv and .xlsx.
+#'#'
+#' @return
+#' Return a tibble
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'   users <- read_anvlista()
+#' }
+read_anvlista <- function() {
+  file_name <- file.path(APEX_options()$root_folder, APEX_options()$anvlista)
+  fext <- tools::file_ext(file_name)
+  if (!(fext %in% c("csv", "xlsx")))  stop("unknown file type")
+  if (fext == "csv") {
+    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
+  } else if (fext == "xlsx"){
+    rawdata <- readxl::read_excel(file_name)
+  }
+  res <- rawdata
+  return(res)
 }

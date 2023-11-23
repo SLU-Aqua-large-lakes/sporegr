@@ -20,6 +20,7 @@ The following options are supported
 \item{\code{resa} File with trip occasions (Default: Spöreg Resa.xlsx)}
 \item{\code{fangst} File with catch/recatch data (Default: Spöreg Resa.xlsx)}
 \item{\code{ovrighandelse} File with misc events (Default: Spöreg Övrighändelse.xlsx)}
+\item{\code{anvlista} File with username, full name and organisation (Default: anvlista.xlsx)}
 }
 }
 

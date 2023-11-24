@@ -29,37 +29,55 @@ sporegApp <- function() {
   users <- sporegr::read_anvlista()
   username <- users$ANV.NAMN
   names(username) <- users$NAMN
-  catches <- sporegr::read_fangst_clean()
+  trip_user <- trips %>% dplyr::select(UUID, ANVID, MALART, FANGOMR)
+  catches <- sporegr::read_fangst_clean() %>%
+    dplyr::left_join(trip_user, by = "UUID")
 
   ### Define UI for application that draws a histogram ----------------------------------------------
-  ui <- fluidPage(
+  ui <- shiny::fluidPage(
 
     # Application title
-    titlePanel(paste0("Spöreg data explorer. Data folder: ", root)),
+    shiny::titlePanel(paste0("Spöreg data explorer. Data folder: ", root)),
 
     # Sidebar with a slider input for number of bins
-    sidebarLayout(
-      sidebarPanel(
-        selectInput("Year", h3("Year:"),
+    shiny::sidebarLayout(
+      shiny::sidebarPanel(
+        shiny::selectInput("Year", shiny::h3("Year:"),
                     choices = as.list(years), selected = 1),
-        selectInput("User", h3("User:"),
+        shiny::selectInput("User", shiny::h3("User:"),
                     choices = as.list(username), selected = 1)        ),
 
       # Show a plot of the generated distribution
-      mainPanel(
-        textOutput("selected_var")
+      shiny::mainPanel(
+        shiny::tabsetPanel(
+          shiny::tabPanel("Trips",
+                          shiny::tableOutput("user_table")),
+          shiny::tabPanel("Catch",
+                          shiny::tableOutput("catch"))
+
+        )
       )
     )
   )
 
   ### Define server logic -------------------------
   server <- function(input, output) {
-    output$selected_var <- renderText({
-      paste(paste("Year: ", input$Year),
-            paste("User: ", input$User))
+    output$user_table <- shiny::renderTable({
+      user_trips <- trips %>%
+        dplyr::filter(ANVID == input$User, Year == input$Year) %>%
+        dplyr::mutate(RESEDATUM = as.character(RESEDATUM),
+                      ANTALPERSONER = as.integer(ANTALPERSONER)) %>%
+        dplyr::select(ANVID, NAMN, RESEDATUM, ANTALPERSONER, MALART, FANGOMR)
+      user_trips
     })
-
+  output$catch <- shiny::renderTable({
+    catch_table <- catches %>%
+      dplyr::filter(ANVID == input$User, Year == input$Year) %>%
+      dplyr::group_by(ARTBEST, FANGOMR) %>%
+      dplyr::summarise(Antal = dplyr::n(), L_max = max(LANGD))
+    catch_table
+    })
   }
+  ### Run the app
+  shiny::shinyApp(ui, server)
 }
-# Run the application
-#sporegApp <- shinyApp(ui = ui, server = server)

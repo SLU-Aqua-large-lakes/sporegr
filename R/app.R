@@ -9,22 +9,29 @@
 
 #library(shiny)
 #library(sporegr)
+
 #' sporegApp
 #'
 #' Start the sporeg shiny app.
+#'
+#' Browse data from the Spöreg app in several different ways. Input data
+#' is read from a predefined location (and filenames) that can be changed with
+#' the \code{\link[sporegr]{APEX_options}} function.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #' library(sporeg)
+#' # APEX_options(root_folder = "C:/your/folder") # if you have private copies
 #' sporegApp()
 #' }
 sporegApp <- function() {
 
   root <- sporegr::APEX_options()$root_folder
-  trips <- sporegr::read_resa_clean()
-  years <- unique(trips$Year)
+  trips <- sporegr::read_resa_clean() %>%
+    dplyr::mutate(Year = as.integer(Year))
+  tripsyears <- unique(trips$Year)
   names(years) <- years
   users <- sporegr::read_anvlista()
   username <- users$ANV.NAMN
@@ -38,25 +45,34 @@ sporegApp <- function() {
 
     # Application title
     shiny::titlePanel(paste0("Spöreg data explorer. Data folder: ", root)),
-
-    # Sidebar with a slider input for number of bins
-    shiny::sidebarLayout(
-      shiny::sidebarPanel(
-        shiny::selectInput("Year", shiny::h3("Year:"),
-                    choices = as.list(years), selected = 1),
-        shiny::selectInput("User", shiny::h3("User:"),
-                    choices = as.list(username), selected = 1)        ),
-
-      # Show a plot of the generated distribution
-      shiny::mainPanel(
-        shiny::tabsetPanel(
-          shiny::tabPanel("Trips",
-                          shiny::tableOutput("user_table")),
-          shiny::tabPanel("Catch",
-                          shiny::tableOutput("catch"))
-
+    shiny::tabsetPanel(
+      shiny::tabPanel(
+        "Overview",
+        # Sidebar with a slider input for number of bins
+          shiny::mainPanel(
+            shiny::tableOutput("Overview1"),
+            shiny::tableOutput("Overview2")
         )
-      )
+      ), # End tabpanel "Overview"
+      shiny::tabPanel(
+        "User",
+        # Sidebar with a slider input for number of bins
+        shiny::sidebarLayout(
+          shiny::sidebarPanel(
+            shiny::selectInput("Year", shiny::h3("Year:"),
+                               choices = as.list(years), selected = 1),
+            shiny::selectInput("User", shiny::h3("User:"),
+                               choices = as.list(username), selected = 1)),
+          # Show a plot of the generated distribution
+          shiny::mainPanel(
+            shiny::tabsetPanel(
+              shiny::tabPanel("Trips",
+                              shiny::tableOutput("user_table")),
+              shiny::tabPanel("Catch",
+                              shiny::tableOutput("catch")))
+          )
+        )
+      ) # End tabpanel "User"
     )
   )
 
@@ -77,7 +93,19 @@ sporegApp <- function() {
       dplyr::summarise(Antal = dplyr::n(), L_max = max(LANGD))
     catch_table
     })
-  }
+  output$Overview1 <- shiny::renderTable({
+    trips_year_omr <- trips %>%
+      dplyr::group_by(Year, FANGOMR) %>%
+      dplyr::summarise(N_trips = dplyr::n())
+    trips_year_omr
+    })
+  output$Overview2 <- shiny::renderTable({
+    catches_art_omr <- catches %>%
+      dplyr::group_by(ARTBEST, FANGOMR) %>%
+      dplyr::summarise(N_fish = dplyr::n()) %>%
+      dplyr::arrange(dplyr::desc(N_fish))
+    catches_art_omr
+  })  }
   ### Run the app
   shiny::shinyApp(ui, server)
 }

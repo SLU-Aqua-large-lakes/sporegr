@@ -7,7 +7,7 @@
 # Variable, global to package's namespace.
 # This function is not exported to user space and does not need to be documented.
 OPTIONS <- settings::options_manager(
-  root_folder = "//storage-dh.slu.se/restricted$/Stora sjoarna/Data/Fritidsfiskedata/Spöreg",
+  root_folder = "//storage-dh.slu.se/restricted$/Stora sjoarna/Projekt_uppdrag_aktiviteter/Fritidsfiske/Spöreg",
   resa = "Spöreg Resa.xlsx",
   fangst = "Spöreg Fångst.xlsx",
   ovrighandelse = "Spöreg Övrighändelse.xlsx",

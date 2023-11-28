@@ -16,7 +16,7 @@
 #'
 #' Browse data from the Spöreg app in several different ways. Input data
 #' is read from a predefined location (and filenames) that can be changed with
-#' the \code{\link[sporegr]{APEX_options}} function.
+#' the \code{\link{APEX_options}} function.
 #'
 #' @export
 #'
@@ -31,13 +31,14 @@ sporegApp <- function() {
   root <- sporegr::APEX_options()$root_folder
   trips <- sporegr::read_resa_clean() %>%
     dplyr::mutate(Year = as.integer(Year))
-  tripsyears <- unique(trips$Year)
+#  tripsyears <- unique(trips$Year)
   names(years) <- years
   users <- sporegr::read_anvlista()
   username <- users$ANV.NAMN
   names(username) <- users$NAMN
   trip_user <- trips %>% dplyr::select(UUID, ANVID, MALART, FANGOMR)
-  catches <- sporegr::read_fangst_clean() %>%
+  catches <- sporegr::read_fangst_clean()
+  catches <- fix_fangst_missing_fangstdattid(catches, trips) %>%
     dplyr::left_join(trip_user, by = "UUID")
 
   ### Define UI for application that draws a histogram ----------------------------------------------

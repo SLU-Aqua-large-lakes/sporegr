@@ -12,7 +12,7 @@ Start the sporeg shiny app.
 \details{
 Browse data from the Spöreg app in several different ways. Input data
 is read from a predefined location (and filenames) that can be changed with
-the \code{\link[sporegr]{APEX_options}} function.
+the \code{\link{APEX_options}} function.
 }
 \examples{
 \dontrun{

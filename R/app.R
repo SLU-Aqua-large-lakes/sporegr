@@ -31,8 +31,8 @@ sporegApp <- function() {
   root <- sporegr::APEX_options()$root_folder
   trips <- sporegr::read_resa_clean() %>%
     dplyr::mutate(Year = as.integer(Year))
-#  tripsyears <- unique(trips$Year)
-  names(years) <- years
+  tripsyears <- unique(trips$Year)
+  names(tripsyears) <- tripsyears
   users <- sporegr::read_anvlista()
   username <- users$ANV.NAMN
   names(username) <- users$NAMN
@@ -61,7 +61,7 @@ sporegApp <- function() {
         shiny::sidebarLayout(
           shiny::sidebarPanel(
             shiny::selectInput("Year", shiny::h3("Year:"),
-                               choices = as.list(years), selected = 1),
+                               choices = as.list(tripsyears), selected = 1),
             shiny::selectInput("User", shiny::h3("User:"),
                                choices = as.list(username), selected = 1)),
           # Show a plot of the generated distribution

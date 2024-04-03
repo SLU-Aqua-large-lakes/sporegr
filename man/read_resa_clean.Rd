@@ -11,10 +11,9 @@ Return a tibble
 }
 \description{
 The location of the file read is predefined with but can be changed with
-the function ?APEX_options().
+the function \code{\link[=APEX_options]{APEX_options()}}.
 The function uses file extension to select how the file should be read.
 Known extensions are .csv and .xlsx.
-#'
 }
 \examples{
 \dontrun{

@@ -24,3 +24,12 @@ The following options are supported
 }
 }
 
+\examples{
+# Show default
+APEX_options()
+
+APEX_options(root_folder = "C:/myfolder") # Change folder where all files are located
+APEX_options()$root_folder # Show the new value
+settings::reset(APEX_options) # Reset to defaults
+
+}

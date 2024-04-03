@@ -31,6 +31,14 @@ OPTIONS <- settings::options_manager(
 #'  \item{\code{anvlista} File with username, full name and organisation (Default: anvlista.xlsx)}
 #' }
 #'
+#' @examples
+#' # Show default
+#' APEX_options()
+#'
+#' APEX_options(root_folder = "C:/myfolder") # Change folder where all files are located
+#' APEX_options()$root_folder # Show the new value
+#' settings::reset(APEX_options) # Reset to defaults
+#'
 #' @export
 APEX_options <- function(...){
   # protect against the use of reserved words.
@@ -44,10 +52,10 @@ APEX_options <- function(...){
 #' Read a file with APEX export of resor from Spöreg database and do some cleanup
 #'
 #' The location of the file read is predefined with but can be changed with
-#' the function ?APEX_options().
+#' the function [APEX_options()].
 #' The function uses file extension to select how the file should be read.
 #' Known extensions are .csv and .xlsx.
-#'#'
+#'
 #' @return
 #' Return a tibble
 #' @export

@@ -14,7 +14,8 @@ Set or get options for reading APEX Spöreg data
 }
 \section{Supported options}{
 
-The following options are supported
+Usually you only need to change \code{root_folder} but it is possible to also change file names
+if needed. Supported keys:
 \itemize{
 \item{\code{root_folder} Datafiles root (Default: //storage-dh.slu.se/restricted$/Stora sjoarna/Data/Fritidsfiskedata/Spöreg)}
 \item{\code{resa} File with trip occasions (Default: Spöreg Resa.xlsx)}

@@ -37,8 +37,11 @@ To create a report for a single user for a specific month you create a new .Rmd 
 by going to "File / New File / R Markdown...", from the popup that appear choose "From template"
 and then choose "Spöreg monthly user report (sporegr)".
 
-Save this file in a directory where you have the APEX CSV-files downloaded. In the YAML-header of
+Save this file in the directory where you want the report to be generated.  In the YAML-header of
 the Rmd file find the "params" block and change "anvid", "year_no" and "month_no" to the desired
 values. Finally format your report by clicking "Knit".
 
+If needed you can modify the Rmd to customize the report for the user.
 
+
+# All users yearly report

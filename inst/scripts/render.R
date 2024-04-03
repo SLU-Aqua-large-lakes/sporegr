@@ -27,6 +27,7 @@ if (!file.exists(year_template)) {
 ## Uncomment and change the line below to change, see ?APEX_options for more info
 ## APEX_options(root_folder = ".")
 
+## Create a data frame with all trips per user
 resa_all <- read_resa_clean() %>%
   select(ANVID, Year) %>% distinct() %>%
   filter(Year != 2021) %>%
@@ -37,6 +38,8 @@ out_dir <- "Rapporter"
 if (!dir.exists(out_dir)) {
   dir.create(out_dir)
 }
+
+## Loop through all user/year combinations and create a report for each
 for (i in 1:nrow(resa_all)) {
   User <- resa_all[i, ]$ANVID
   Year <- resa_all[i, ]$Year

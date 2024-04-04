@@ -2,3 +2,6 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^Sp.*\.csv$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

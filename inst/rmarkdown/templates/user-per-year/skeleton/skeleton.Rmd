@@ -15,13 +15,14 @@ header-includes:
   - \renewcommand{\tablename}{Tabell}
   - \renewcommand{\contentsname}{Innehåll}
 params:
-  anvid: gorsun
-  year_no: 2023
+  anvid: mange
+  year_no: 2024
 ---
 
 
 ```{r setup, include=FALSE}
 # setwd("~/sporeg")
+# rm(list = ls())
 
 library(sporegr)
 library(dplyr)
@@ -40,21 +41,20 @@ anvid <- params$anvid
 year_no <- params$year_no
 
 # Load and prep data...
-#resa_name <- "Spöreg Resa.csv"
-#ovrighandelse_name <- "Spöreg Övrighändelse.csv"
-#fangst_name <- "Spöreg Fångst.csv"
 resa_name <- "Spöreg Resa.xlsx"
 ovrighandelse_name <- "Spöreg Övrighändelse.xlsx"
 fangst_name <- "Spöreg Fångst.xlsx"
 
 # ... using functions included in library(sporeg)
-resa <- read_resa_clean(resa_name)  %>% filter(ANVID == anvid, Year == year_no)
+resa <- read_resa_clean()  %>% filter(ANVID == anvid, Year == year_no)
 resor_uuid <- resa %>% pull(UUID) %>% unique()
-ovrighandelse <- read_ovrighandelse_clean(ovrighandelse_name) %>%
+ovrighandelse <- read_ovrighandelse_clean() %>%
   filter(UUID %in% resor_uuid)
-fangst <- read_fangst_clean(file_name = fangst_name) %>% filter(UUID %in% resor_uuid)
+fangst <- read_fangst_clean() %>% filter(UUID %in% resor_uuid)
 fangst <- fix_fangst_missing_fangstdattid(fangst, resa)
-have_fangst <- nrow(fangst) > 0
+have_fangst <- nrow(fangst) > 0 
+
+
 
 ## Create a table of trips with zero catch
 zero_trips <- resa %>%
@@ -69,14 +69,6 @@ zero_trips <- resa %>%
 fangst_resa <- resa %>%
   right_join(fangst, by = c("UUID" = "UUID"))
 
-
-## Andel återutsatt behöver beakta både "N" och "J" eftersom default är "NA". 
-# Skip for now. If used later, place below in its own chunk.
-released_fangst <- fangst %>%
-  filter(ATERUTSATT == "J") %>%
-  summarise(released_fangst = n()) %>%
-  pull(released_fangst)
-
 ```
 
 ## Inrapporterat data för användare `r anvid`  
@@ -88,21 +80,35 @@ all_dates <- seq(from = as.Date(first_date),
                  to = as.Date(last_date), by = 1)
 trip_dates <- format(unique(sort(resa$RESEDATUM)), "%b-%d") # Sorted date labels used to construct factors later
 tot_fangst <- nrow(fangst)
+
+# odlad info till inledande text
+is.öring <- sum(unique(fangst$ARTBEST %in% c("Öring")))
+tot.öring <- dim(fangst[fangst$ARTBEST=="Öring",])[1]
+odlad.öring <- dim(fangst[fangst$ARTBEST=="Öring" & fangst$ODLAD=="J",])[1]
+
+is.lax <- sum(unique(fangst$ARTBEST %in% c("Lax")))
+tot.lax <- dim(fangst[fangst$ARTBEST=="Lax",])[1]
+odlad.lax <- dim(fangst[fangst$ARTBEST=="Lax" & fangst$ODLAD=="J",])[1]
+# gädd-info till inledande text
+is.gädda <- sum(unique(fangst$ARTBEST %in% c("Gädda")))
 Ngadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda") %>% summarise(N=n()))
-storgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=1000) %>% summarise(N=n()))
+storgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=100) %>% summarise(N=n()))
 prcntstor <- round(storgadda/Ngadda*100,2)
-mediumgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=750) %>% summarise(N=n()))
+mediumgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=75) %>% summarise(N=n()))
 prcntmedium <- round(mediumgadda/Ngadda*100,2)
+
 ```
 
 
 
+Användare *`r anvid`* har under perioden `r first_date` till `r last_date` rapporterat `r nrow(resa)` turer och `r tot_fangst` fiskar.  
 
+`r if(is.öring>0){paste("Av totalt ", tot.öring, " rapporterade öringar, har ", odlad.öring, " rapporterats som odlade.", sep="")}`
+`r if(is.lax>0){paste("Av totalt ", tot.lax, " rapporterade laxar, har ", odlad.lax, " rapporterats som odlade.", sep="")}`
+`r if(is.gädda>0){paste("Av totalt ", Ngadda, " rapporterade gäddor var ", storgadda, " över en meter (", prcntstor, " %) och ", mediumgadda, " var över 75 cm (", prcntmedium, " %).", sep="")}`
 
-Användare  *`r anvid`* har under perioden `r first_date` till `r last_date` rapporterat `r nrow(resa)` resor och `r tot_fangst` fiskar. Totalt fångades `r Ngadda`  gäddor varav `r storgadda` st var över en meter (`r prcntstor` %) och `r mediumgadda` st var över 75 cm (`r prcntmedium` %). 
-
-```{r map_overview, fig.cap="Rapporterad startposition för alla resor under perioden", fig.alt="Karta alla resor"}
-bbox <- sporeg_bbox(resa) 
+```{r map_overview, fig.cap="Rapporterad position för alla turer (röda symboler) och fångster (svarta cirklar).", fig.alt="Karta turer och fångster"}
+bbox <- sporeg_bbox(rbind(resa[,c("POSITIONE", "POSITIONN")], fangst[,c("POSITIONE","POSITIONN")])) 
 upperleft <- c(bbox["top"], bbox["left"])
 lowerright <- c(bbox["bottom"], bbox["right"])
 map_os <- OpenStreetMap::openproj(
@@ -118,20 +124,26 @@ map <- ggplot2::ggplot() +
     aes(x = POSITIONE, y = POSITIONN),
     fill = "red", shape = 23,
     size = 2, show.legend = FALSE) +
+  ggplot2::geom_point(data = fangst,
+    aes(x = POSITIONE, y = POSITIONN),
+    fill="black", shape = 21, 
+    size=3, alpha=0.4, show.legend = FALSE) +
    ggplot2::theme_bw() +
   ggplot2::coord_cartesian()
 print(map)
 ```
 
 
+
+
 ```{r resa_summary_table}
-t1 <- resa %>%
-  select(NAMN,RESEDATUM, FANGOMR, MALART, ANTALPERSONER,
-         FISKEMINUTER, UUID)
+t1 <- resa %>% 
+  select(NAMN,RESEDATUM, FANGOMR, MALART, ANTALPERSONER, FISKEMINUTER, UUID)
 t2 <- fangst %>%
   group_by(UUID, ARTBEST) %>%
   summarise(Antal = n(),
-            MaxLangd = max(LANGD)/10,
+            MedLangd = median(LANGD),
+            MaxLangd = max(LANGD),
             .groups = "drop")
 
  resa_summary <- t1 %>%
@@ -140,13 +152,13 @@ t2 <- fangst %>%
      select(Resa, Datum = RESEDATUM,
             Målart = MALART,
             Område = FANGOMR, Personer = ANTALPERSONER,
-            Minuter = FISKEMINUTER, `Fångst (målart)` = Antal,
+            Minuter = FISKEMINUTER, `Fångst (målart)` = Antal,  ## Kan vi räkna om minuter till HH:MM? Klurigt.
             `Längsta fisk (cm)` = MaxLangd) %>% 
      tidyr::replace_na(list(`Fångst (målart)`= 0,
                             `Längsta fisk (cm)`=0))
   #mutate(`Fångstindex (antal per spötimme)` = round(`Fångst (målart)` / (Minuter/60*Personer),2))
 
-cap <- paste0("Alla resor under perioden")
+cap <- paste0("Alla turer under perioden")
 kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
                 linesep="",
                 longtable = TRUE) %>%
@@ -156,16 +168,36 @@ kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
 #kableExtra::kbl(resa_summary, caption = cap)
 ```
 
-```{r individ_summary_table}
+
+```{r release_table}
+## Create a table for release rates by species
+# Need to consider both "N" and "J" since default is "NA". I.e., the levels of ATERUTSATT varies with anvid.
+#fangst[is.na(fangst$ATERUTSATT), "ATERUTSATT"] <- "Ejangett"
+#fangst$ATERUTSATT <- factor(fangst$ATERUTSATT, levels=c("J", "N", "Ejangett"))
+t3 <- fangst %>% rename(Art = ARTBEST) %>% dplyr::group_by(Art, ATERUTSATT) %>% dplyr::summarize(N=n()) %>% 
+  tidyr::pivot_wider(values_from = N, names_from = ATERUTSATT, values_fill=0) 
+  
+
+cap <- "Återutsättning. J = antal återutsatta, N = antal behållna och NA = antal ej angett."
+kableExtra::kbl(t3, caption = cap, booktabs = TRUE,
+                linesep="", longtable = TRUE,
+                centering = FALSE) %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position"), position = "left")
+```
+
+
+```{r individual_table}
 fangst_per_art <- fangst_resa %>% 
   group_by(FANGOMR, ARTBEST) %>% 
-  summarise(Antal = n(), 
+  summarise(Antal = n(),
+            Medianlängd = median(LANGD),
             Längsta = max(LANGD),
             .groups = "drop") %>%
   rename(Art = ARTBEST,
          Område = FANGOMR)
 
-cap <- "Totalt antal fiskar samt största exemplar (mm)"
+cap <- "Totalt antal fiskar per fiskeområde samt median- och maxlängd (cm)"
 kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
                 linesep="", longtable = TRUE,
                 centering = FALSE) %>%
@@ -174,6 +206,7 @@ kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
 
 #knitr::kable(fangst_per_art, caption = cap)
 ```
+
 
 ```{r per-date-plot, fig.cap = "Fångst per resa"}
 #Create plot with catch per day. One panel per species caught
@@ -240,7 +273,7 @@ cpue_per_date_plot <- cpuedata %>%
   theme(legend.position = "bottom") +
   labs(fill="Område",
        col="Område") +
-  ylab("Fångstindex (antal per spötimme)") + xlab("")
+  ylab("Fångstindex") + xlab("")
 
 if (have_fangst) {
   print(cpue_per_date_plot)
@@ -252,14 +285,14 @@ if (have_fangst) {
 
 
 
-```{r length_dist, fig.cap="Antal fiskar per längdgrupp"}
+```{r length_dist, fig.cap="Antal fiskar per 2.5 cm längdgrupp"}
 length_dist <- fangst %>%
   group_by(ARTBEST) %>%
   mutate(n = n()) %>%
   filter(n > 10)
   
 if (nrow(length_dist) > 0) {
-  length_plot <- ggplot(data = length_dist, mapping = aes(x = LANGD/10)) +
+  length_plot <- ggplot(data = length_dist, mapping = aes(x = LANGD)) +
     geom_histogram( binwidth = 2.5, boundary=0, closed="left", fill="gray80",color="black") +
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
     facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
@@ -267,6 +300,6 @@ if (nrow(length_dist) > 0) {
     theme_bw()
   print(length_plot)
 } else {
-  print("För få fångster för att plotta längddistribution")
+  print("För få fångster för att plotta längdfördelning")
 }
 ```

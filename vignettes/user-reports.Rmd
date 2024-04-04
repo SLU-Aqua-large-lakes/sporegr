@@ -2,7 +2,7 @@
 title: "Creating reports for the users of Spöreg"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{user-reports}
+  %\VignetteIndexEntry{Creating reports for the users of Spöreg}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 

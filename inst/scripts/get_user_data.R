@@ -5,10 +5,7 @@ anvid <- "gorsun"
 year_no <- 2024
 
 
-setwd("C:/R/sporegr/240402")
-resa_name <- "Spöreg Resa.xlsx"
-ovrighandelse_name <- "Spöreg Övrighändelse.xlsx"
-fangst_name <- "Spöreg Fångst.xlsx"
+#setwd("C:/R/sporegr/240402")
 
 # ... using functions included in library(sporeg)
 resa <- read_resa_clean()  %>% filter(ANVID == anvid, Year == year_no)
@@ -31,11 +28,13 @@ zero_trips <- resa %>%
 fangst_resa <- resa %>%
   left_join(fangst, by = c("UUID" = "UUID"))
 
-write.table(fangst_resa, "clipboard", quote=F, row.names=F, sep="\t")
+#write.table(fangst_resa, "clipboard", quote=F, row.names=F, sep="\t")
+filename <- paste0(anvid, "_", year_no, ".csv")
+write.csv(fangst_resa, filename, quote=F, row.names=F, sep="\t")
 
 ## Andel återutsatt behöver beakta både "N" och "J" eftersom default är "NA".
 # Skip for now. If used later, place below in its own chunk.
-released_fangst <- fangst %>%
-  filter(ATERUTSATT == "J") %>%
-  summarise(released_fangst = n()) %>%
-  pull(released_fangst)
+# released_fangst <- fangst %>%
+#   filter(ATERUTSATT == "J") %>%
+#   summarise(released_fangst = n()) %>%
+#   pull(released_fangst)

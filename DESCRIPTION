@@ -1,11 +1,11 @@
 Package: sporegr
 Title: Work With Data From the Spöreg mobile app
 Version: 0.2.1
-Authors@R: 
+Authors@R: c(
     person("Anders", "Kagervall", , "anders.kagervall@slu.se", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4790-2696")),
     person("Göran", "Sundblad", , "goran.sundblad@slu.se", role = c("cre"),
-           comment = c(ORCID = "0000-0001-8970-9996"))
+           comment = c(ORCID = "0000-0001-8970-9996")))
 Description: Work with Spöreg-data.
 Imports:
   utils,

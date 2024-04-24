@@ -27,12 +27,18 @@ and renaming is done to make the dataset more R friendly.
 Useful links:
 \itemize{
   \item \url{https://github.com/kagervall/sporegr}
+  \item \url{https://kagervall.github.io/sporegr/}
   \item Report bugs at \url{https://github.com/kagervall/sporegr/issues}
 }
 
 }
 \author{
 \strong{Maintainer}: Anders Kagervall \email{anders.kagervall@slu.se} (\href{https://orcid.org/0000-0003-4790-2696}{ORCID})
+
+Authors:
+\itemize{
+  \item Göran Sundblad \email{goran.sundblad@slu.se} (\href{https://orcid.org/0000-0001-8970-9996}{ORCID})
+}
 
 }
 \keyword{internal}

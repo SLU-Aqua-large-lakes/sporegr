@@ -40,12 +40,10 @@ knitr::opts_chunk$set(message = FALSE)
 anvid <- params$anvid
 year_no <- params$year_no
 
-# Load and prep data...
-resa_name <- "Spöreg Resa.xlsx"
-ovrighandelse_name <- "Spöreg Övrighändelse.xlsx"
-fangst_name <- "Spöreg Fångst.xlsx"
-
-# ... using functions included in library(sporeg)
+# Load and prep data using functions included in library(sporeg)
+# If needed change the path where APEX-exports are found.
+#
+#APEX_options(root_folder = "C:/your/full/path")
 resa <- read_resa_clean()  %>% filter(ANVID == anvid, Year == year_no)
 resor_uuid <- resa %>% pull(UUID) %>% unique()
 ovrighandelse <- read_ovrighandelse_clean() %>%
@@ -148,11 +146,12 @@ t2 <- fangst %>%
 
  resa_summary <- t1 %>%
   left_join(t2, by = c("UUID" = "UUID", "MALART" = "ARTBEST")) %>%
-   mutate(Resa =  substr(NAMN, 1, 15)) %>%
+   mutate(Resa =  substr(NAMN, 1, 15), Fisketid = minutes2HHMM(FISKEMINUTER)) %>%
      select(Resa, Datum = RESEDATUM,
             Målart = MALART,
             Område = FANGOMR, Personer = ANTALPERSONER,
-            Minuter = FISKEMINUTER, `Fångst (målart)` = Antal,  ## Kan vi räkna om minuter till HH:MM? Klurigt.
+            Fisketid,
+            `Fångst (målart)` = Antal,
             `Längsta fisk (cm)` = MaxLangd) %>% 
      tidyr::replace_na(list(`Fångst (målart)`= 0,
                             `Längsta fisk (cm)`=0))

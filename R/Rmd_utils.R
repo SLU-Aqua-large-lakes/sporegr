@@ -1,6 +1,24 @@
 # Collection of functions that can be useful to make nicer Rmd documents.
 
 
+#' Minutes to HH:MM
+#'
+#' Convert number of minutes to a character string in format HH:;;
+#'
+#' @param minutes
+#'
+#' @return
+#' character
+#' @export
+#'
+#' @examples
+#' minutes2HHMM(c(61, 150))
+minutes2HHMM <- function(minutes) {
+  HH <- minutes %/% 60
+  MM <- minutes %% 60
+  return(sprintf("%d:%02d", HH, MM))
+}
+
 # function for nicer plots
 #' integer_breaks
 #'

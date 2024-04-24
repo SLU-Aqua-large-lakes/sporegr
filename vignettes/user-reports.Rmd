@@ -101,7 +101,7 @@ To create a yearly report for all users you can use the script
 
 ```{r get-script, eval=FALSE}
 ## Make a copy of the render.R script and save in in your current directory
-copy.file(from = system.file("scripts", "render.R", package = "sporegr"),
+file.copy(from = system.file("scripts", "render.R", package = "sporegr"),
           to = "render.R")
 ```
 

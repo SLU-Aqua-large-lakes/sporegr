@@ -3,7 +3,7 @@
 ## render.R will render a PDF-report for all trips and all users found in the
 ## datafiles exported from the sporeg-datastore.
 ## To get a copy of this file use:
-## copy.file(from = system.file("scripts", "render.R", package = "sporegr"),
+## file.copy(from = system.file("scripts", "render.R", package = "sporegr"),
 ##           to = "render.R")
 ##
 

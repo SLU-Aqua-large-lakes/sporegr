@@ -13,7 +13,7 @@ minutes2HHMM(minutes)
 character
 }
 \description{
-Convert number of minutes to a character string in format HH:;;
+Convert number of minutes to a character string in format HH:MM
 }
 \examples{
 minutes2HHMM(c(61, 150))

@@ -258,29 +258,28 @@ cpuedata <- fangst_resa %>% filter(MALART==ARTBEST) %>%
   bind_rows(zero_trips)
 
 ## Plot catch index over time, by target species
-cpue_per_date_plot <- cpuedata %>%
-  ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
-  geom_line(aes(col=FANGOMR), alpha = .5) +
-  geom_point(size=2, aes(col=FANGOMR), alpha = .8) + 
-  facet_grid(scales = "free_y", rows = vars(MALART)) +
-  ## date_breaks måste anpassas till hur många dagar man har,
-  ##calc_date_breaks() försöker fixa
-  scale_x_date(date_breaks =
-                 calc_date_breaks(first_date, last_date) ,
-               date_labels = "%b-%d",
-               guide = guide_axis(angle = 60), expand = expansion(mult = .02)) +
-  #scale_y_continuous(breaks = integer_breaks()) +
-  scale_color_manual(values = SLUcolors::SLUpalette("wong_234516", color_names = FALSE)) +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  labs(fill="Område",
-       col="Område") +
-  ylab("Fångstindex") + xlab("")
-
-if (have_fangst) {
+if (nrow(cpuedata) > 0) {
+  cpue_per_date_plot <- cpuedata %>%
+    ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
+    geom_line(aes(col=FANGOMR), alpha = .5) +
+    geom_point(size=2, aes(col=FANGOMR), alpha = .8) + 
+    facet_grid(scales = "free_y", rows = vars(MALART)) +
+    ## date_breaks måste anpassas till hur många dagar man har,
+    ##calc_date_breaks() försöker fixa
+    scale_x_date(date_breaks =
+                   calc_date_breaks(first_date, last_date) ,
+                 date_labels = "%b-%d",
+                 guide = guide_axis(angle = 60), expand = expansion(mult = .02)) +
+    #scale_y_continuous(breaks = integer_breaks()) +
+    scale_color_manual(values = SLUcolors::SLUpalette("wong_234516", color_names = FALSE)) +
+    theme_bw() +
+    theme(legend.position = "bottom") +
+    labs(fill="Område",
+         col="Område") +
+    ylab("Fångstindex") + xlab("")
   print(cpue_per_date_plot)
 } else {
-  print("Inga fångster")
+  print("Inga fångster av målart")
 }
 ```
 

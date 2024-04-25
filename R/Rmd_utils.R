@@ -3,7 +3,7 @@
 
 #' Minutes to HH:MM
 #'
-#' Convert number of minutes to a character string in format HH:;;
+#' Convert number of minutes to a character string in format HH:MM
 #'
 #' @param minutes
 #'

@@ -175,12 +175,14 @@ kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
 #fangst$ATERUTSATT <- factor(fangst$ATERUTSATT, levels=c("J", "N", "Ejangett"))
 t3 <- fangst %>%
   rename(Art = ARTBEST) %>%
+  mutate(ATERUTSATT = if_else(is.na(ATERUTSATT), "N/A", ATERUTSATT)) %>%
+  mutate(ATERUTSATT = factor(ATERUTSATT, levels = c("J", "N", "N/A"))) %>%
   dplyr::group_by(Art, ATERUTSATT) %>%
   dplyr::summarize(N=n(), .groups = "drop") %>% 
-  tidyr::pivot_wider(values_from = N, names_from = ATERUTSATT, values_fill=0) 
+  tidyr::pivot_wider(values_from = N, names_from = ATERUTSATT, values_fill=0, names_expand = TRUE) 
   
 
-cap <- "Återutsättning. J = antal återutsatta, N = antal behållna och NA = antal ej angett."
+cap <- "Återutsättning. J = antal återutsatta, N = antal behållna och N/A = antal ej angett."
 kableExtra::kbl(t3, caption = cap, booktabs = TRUE,
                 linesep="", longtable = TRUE,
                 centering = FALSE) %>%

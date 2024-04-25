@@ -173,7 +173,10 @@ kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
 # Need to consider both "N" and "J" since default is "NA". I.e., the levels of ATERUTSATT varies with anvid.
 #fangst[is.na(fangst$ATERUTSATT), "ATERUTSATT"] <- "Ejangett"
 #fangst$ATERUTSATT <- factor(fangst$ATERUTSATT, levels=c("J", "N", "Ejangett"))
-t3 <- fangst %>% rename(Art = ARTBEST) %>% dplyr::group_by(Art, ATERUTSATT) %>% dplyr::summarize(N=n()) %>% 
+t3 <- fangst %>%
+  rename(Art = ARTBEST) %>%
+  dplyr::group_by(Art, ATERUTSATT) %>%
+  dplyr::summarize(N=n(), .groups = "drop") %>% 
   tidyr::pivot_wider(values_from = N, names_from = ATERUTSATT, values_fill=0) 
   
 

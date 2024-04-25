@@ -1,9 +1,9 @@
 pandoc: 3.1.11
-pkgdown: 2.0.7
+pkgdown: 2.0.9
 pkgdown_sha: ~
 articles:
   user-reports: user-reports.html
-last_built: 2024-04-04T13:12Z
+last_built: 2024-04-25T08:34Z
 urls:
   reference: https://kagervall.github.io/sporegr/reference
   article: https://kagervall.github.io/sporegr/articles

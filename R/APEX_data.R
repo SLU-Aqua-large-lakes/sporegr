@@ -78,7 +78,10 @@ read_resa_clean <- function() {
     dplyr::select(-ANV_ID, -SPOREGRESA_APPVERSION, -SPOREGSTOPP_STARTDATTID, - SPOREGSTOPP_STOPDATTID) %>%
     dplyr::rename_with(.fn = .fix_names) %>%
     dplyr::mutate(RESEDATUM = as.Date(RESEDATUM)) %>%
-    dplyr::mutate(Year = lubridate::year(RESEDATUM), Month = lubridate::month(RESEDATUM))
+    dplyr::mutate(Year = lubridate::year(RESEDATUM),
+                  Month = lubridate::month(RESEDATUM),
+                  Day = lubridate::day(RESEDATUM),
+                  Quarter = lubridate::quarter(RESEDATUM))
   return(res)
 }
 
@@ -152,10 +155,8 @@ read_fangst_clean <- function() {
     dplyr::select(UUID, ARTBEST, FANGSTDATTID, LANGD, is_est_LANGD,
                   VIKT, is_est_VIKT, ATERUTSATT, ODLAD, MARKNING, KLIPPTFENAHOGER,
                   KLIPPTFENAVANSTER, AVVIKELSE, POSITIONN, POSITIONE) %>%
-    dplyr::mutate(Year = lubridate::year(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
-                  Month = lubridate::month(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
-                  Day = lubridate::day(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
-                  Quarter = lubridate::quarter(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")))
+    dplyr::mutate(Hour = lubridate::hour(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
+                  Minute = lubridate::minute(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")))
   return(res)
   }
 

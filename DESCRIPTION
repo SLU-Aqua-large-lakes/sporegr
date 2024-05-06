@@ -18,6 +18,7 @@ Imports:
   lubridate,
   sf,
   shiny,
+  esquisse,
   kableExtra,
   OpenStreetMap,
   rJava,

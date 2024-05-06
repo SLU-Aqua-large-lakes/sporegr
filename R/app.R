@@ -51,8 +51,8 @@ sporegApp <- function() {
         "Overview",
         # Sidebar with a slider input for number of bins
           shiny::mainPanel(
-            shiny::tableOutput("Overview1"),
-            shiny::tableOutput("Overview2")
+            shiny::tableOutput(outputId = "Overview1"),
+            shiny::tableOutput(outputId = "Overview2")
         )
       ), # End tabpanel "Overview"
       shiny::tabPanel(
@@ -60,20 +60,38 @@ sporegApp <- function() {
         # Sidebar with a slider input for number of bins
         shiny::sidebarLayout(
           shiny::sidebarPanel(
-            shiny::selectInput("Year", shiny::h3("Year:"),
+            shiny::selectInput(inputId = "Year",
+                               shiny::h3("Year:"),
                                choices = as.list(tripsyears), selected = 1),
-            shiny::selectInput("User", shiny::h3("User:"),
+            shiny::selectInput(inputId = "User",
+                               shiny::h3("User:"),
                                choices = as.list(username), selected = 1)),
           # Show a plot of the generated distribution
           shiny::mainPanel(
             shiny::tabsetPanel(
               shiny::tabPanel("Trips",
-                              shiny::tableOutput("user_table")),
+                              shiny::tableOutput(outputId = "user_table")),
               shiny::tabPanel("Catch",
-                              shiny::tableOutput("catch")))
+                              shiny::tableOutput(outputId = "catch")))
           )
         )
-      ) # End tabpanel "User"
+      ), # End tabpanel "User"
+      shiny::tabPanel(
+        "Esquisse",
+        esquisse::esquisse_ui(
+          id = "esquisse",
+          header = FALSE # dont display gadget title
+        ),
+        tabPanel(
+          title = "output",
+          tags$b("Code:"),
+          verbatimTextOutput("code"),
+          tags$b("Filters:"),
+          verbatimTextOutput("filters"),
+          tags$b("Data:"),
+          verbatimTextOutput("data")
+        )
+      )
     )
   )
 
@@ -106,7 +124,23 @@ sporegApp <- function() {
       dplyr::summarise(N_fish = dplyr::n()) %>%
       dplyr::arrange(dplyr::desc(N_fish))
     catches_art_omr
-  })  }
+  })
+  results <- esquisse::esquisse_server(
+    id = "esquisse",
+    data_rv = catches
+  )
+  output$code <- renderPrint({
+    results$code_plot
+  })
+
+  output$filters <- renderPrint({
+    results$code_filters
+  })
+
+  output$data <- renderPrint({
+    str(results$data)
+  })
+  }
   ### Run the app
   shiny::shinyApp(ui, server)
 }

@@ -1,28 +1,30 @@
 Package: sporegr
 Title: Work With Data From the Spöreg mobile app
-Version: 0.2.1
+Version: 0.2.2
 Authors@R: c(
     person("Anders", "Kagervall", , "anders.kagervall@slu.se", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4790-2696")),
     person("Göran", "Sundblad", , "goran.sundblad@slu.se", role = c("aut"),
            comment = c(ORCID = "0000-0001-8970-9996")))
-Description: Work with Spöreg-data.
+Description: Routines to read data exported from
+  the SpöReg database. Also provided are templates to generate reports
+  from this data and a shiny app to explore the data interactivly,
 Imports:
-  utils,
-  settings,
-  magrittr,
   dplyr,
-  readxl,
+  esquisse,
   ggplot2,
-  stringr,
+  kableExtra,
   lubridate,
+  magrittr,
+  OpenStreetMap,
+  readxl,
+  rJava,
+  settings,
   sf,
   shiny,
-  esquisse,
-  kableExtra,
-  OpenStreetMap,
-  rJava,
-  terrainr
+  stringr,
+  terrainr,
+  utils
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

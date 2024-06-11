@@ -82,14 +82,14 @@ sporegApp <- function() {
           id = "esquisse",
           header = FALSE # dont display gadget title
         ),
-        tabPanel(
+        shiny::tabPanel(
           title = "output",
-          tags$b("Code:"),
-          verbatimTextOutput("code"),
-          tags$b("Filters:"),
-          verbatimTextOutput("filters"),
-          tags$b("Data:"),
-          verbatimTextOutput("data")
+          shiny::strong("Code:"),
+          shiny::verbatimTextOutput("code"),
+          shiny::strong("Filters:"),
+          shiny::verbatimTextOutput("filters"),
+          shiny::strong("Data:"),
+          shiny::verbatimTextOutput("data")
         )
       )
     )

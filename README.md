@@ -1,7 +1,7 @@
 # Package sporegr
 # sporegr <a href="https://kagervall.github.io/sporegr/"><img src="man/figures/logo.png" align="right" height="139" alt="sporegr website" /></a>
 
-This package will help you Work with data from the Spöreg mobile app. The package contains
+This package will help you work with data from the Spöreg mobile app. The package contains
 functions to read (and do some cleanup) of data files exported from predefined queries in APEX (datastore).
 
 I also contains rmarkdown templates for some reports. 

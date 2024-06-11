@@ -17,6 +17,7 @@ Imports:
   lubridate,
   magrittr,
   OpenStreetMap,
+  plotly,
   readxl,
   rJava,
   settings,

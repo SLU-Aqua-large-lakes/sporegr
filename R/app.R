@@ -122,7 +122,7 @@ sporegApp <- function() {
     catches_art_omr <- catches %>%
       dplyr::group_by(ARTBEST, FANGOMR) %>%
       dplyr::summarise(N_fish = dplyr::n()) %>%
-      dplyr::arrange(dplyr::desc(N_fish))
+      dplyr::arrange(ARTBEST)
     catches_art_omr
   })
   results <- esquisse::esquisse_server(

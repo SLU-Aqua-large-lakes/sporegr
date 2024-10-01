@@ -1,0 +1,347 @@
+---
+title: "Översiktsrapport Spöreg"
+author: "SLU Aqua"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+ #pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+
+#remotes::install_github("https://github.com/kagervall/sporegr", build_vignettes = TRUE)
+library(dplyr)
+library(tidyr)
+library(readxl)
+library(ggplot2)
+library(sporegr)
+library(ggthemes)
+
+users <- sporegr::read_anvlista()
+nusers <- nrow(users)
+# Users by organisation table
+users_tab <- users %>%
+  group_by(Organisation) %>%
+  summarise(N = n()) %>%
+  arrange(desc(N))
+
+trips <- sporegr::read_resa_clean()
+first_date <-  min(trips$RESEDATUM)
+last_date <- max(trips$RESEDATUM)
+ntrips <- nrow(trips)
+# Trips by area and year table
+trips_tab1 <- trips %>%
+  group_by(FANGOMR) %>%
+  summarise(Totalt = n()) %>%
+  arrange(desc(Totalt))
+trips_tab2 <- trips %>% 
+  group_by(FANGOMR, Year) %>% 
+  summarize(N=n()) %>% 
+  tidyr::pivot_wider(names_from="Year", values_from="N", values_fill=list(value=0))
+trips_tab <- dplyr::left_join(trips_tab1, trips_tab2, by="FANGOMR")
+  # add total row (in the following way all are converted to character so save as different object)
+trips_tab_chr <- rbind(trips_tab, c("Total", colSums(trips_tab[,2:dim(trips_tab)[[2]]], na.rm=T)))
+
+# Target species by area and year table
+target_tab1 <- trips %>%
+  group_by(FANGOMR, MALART) %>%
+  summarise(Totalt = n()) %>%
+  tidyr::pivot_wider(names_from="MALART", values_from="Totalt", values_fill=list(Totalt=0)) %>% 
+  arrange(desc(Gädda)) %>% ungroup()
+target_tab_chr <- rbind(target_tab1, c("Total", colSums(target_tab1[,2:dim(target_tab1)[[2]]], na.rm=T)))
+# Change order - manually for now
+target_tab_chr2 <- target_tab_chr[,c(1, 2, 6, 3, 8, 9, 4, 5)]
+
+
+
+# Catch data fix
+catches <- sporegr::read_fangst_clean()
+catches.trips <- dplyr::left_join(catches, trips, by="UUID")
+
+# Other events  #### 
+other <- sporegr::read_ovrighandelse_clean()
+trips.other <- dplyr::left_join(trips, other, by="UUID")
+nother <- nrow(other)
+# 
+
+
+# Fish (number, regardless of species) by area and year table
+nfish <- nrow(catches)
+catch_tab1 <- catches.trips %>% 
+  group_by(FANGOMR) %>% 
+  summarise(Totalt = n()) %>% 
+  arrange(desc(Totalt))
+catch_tab2 <- catches.trips %>% 
+  group_by(FANGOMR, Year) %>% 
+  summarize(N=n()) %>% 
+  tidyr::pivot_wider(names_from="Year", values_from="N", values_fill=list(value=0))
+catch_tab <- dplyr::left_join(catch_tab1, catch_tab2, by="FANGOMR")
+# add total row (in the following way all are converted to character so save as different object)
+catch_tab_chr <- rbind(catch_tab, c("Total", colSums(catch_tab[,2:dim(catch_tab)[[2]]], na.rm=T)))
+
+# Species total and size info table
+species_tab <- catches %>%
+  group_by(ARTBEST) %>%
+  summarize(Totalt=n(), 
+            Medellängd = round(mean(LANGD, na.rm = TRUE),0), 
+            Maxlängd = max(LANGD, na.rm = TRUE),
+            Maxvikt = max(VIKT, na.rm = TRUE), .groups = "drop") %>%
+  mutate(Medellängd = if_else(is.infinite(Medellängd), as.numeric(NA), Medellängd),
+         Maxlängd = if_else(is.infinite(Maxlängd), as.numeric(NA), Maxlängd),
+         Maxvikt = if_else(is.infinite(Maxvikt), as.numeric(NA), Maxvikt))%>%
+  arrange(desc(Totalt))
+
+
+####### Before moving on - manually check which species, areas and years that have enough data #####
+##species_by_area <- table(catches.trips$ARTBEST, catches.trips$FANGOMR)
+ # table(catches.trips$ARTBEST, catches.trips$FANGOMR, catches.trips$Year)
+ # table(catches.trips$ARTBEST, catches.trips$FANGOMR)
+ # table(catches.trips$ARTBEST, catches.trips$Year)
+## Start with pooled by area, for Gädda, Abborre, Öring, Röding, Lax, Gös och Harr
+ 
+## FÖRSLAG - kör figurer först per art (för relevanta områden) och sen per område
+# 1 gädda med FANGOMR som kolumner. Ej Vättern
+# 2 öring Kust, Vänern, Vättern och ÖVrigt vatten
+# 3 abborre, Kust, Mälaren, 
+# 4 Vättern, röding, och då ta med öring och lax
+# 5 Vänern, gädda, lax, öring  
+
+#### Beräkna även indikatorer ####
+## Börja med längd för utvalda arter enligt:
+Lindicators.pike <- catches.trips %>% 
+  filter(ARTBEST=="Gädda", !FANGOMR=="Vättern") %>% 
+  drop_na(LANGD) %>% # en användare som bulkreggat gäddor utan langd, behöver ta bort sådana
+  mutate(meterfisk = ifelse(LANGD>=100, 1, 0)) %>% 
+  group_by(FANGOMR) %>% 
+  summarize(Antal.fiskar =n(),
+            L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
+            L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
+            L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
+            Andel.meterfisk = round(sum(meterfisk)/Antal.fiskar*100, 1))
+  
+  
+### Finns många fler saker att lägga in, tex
+# övrig händelse
+# karta - påbörjat för resa och fångst
+# odlingsinfo
+# återutsättning
+# estimerad vs uppmätt längd (och vikt)
+# vikt-längdförhållanden
+# tider på dygnet - tex så här: hour.plot <- catches.trips %>% filter(!ARTBEST %in% c("Asp", "Björkna", "Id", "Storspigg", "Gös", "Harr") & Year>2021) %>% ggplot(., aes(Hour)) + geom_histogram(binwidth=1, fill="#56B4E9",color="black") + facet_grid(rows=vars(FANGOMR), cols=vars(ARTBEST), scales="free_y") +  theme_bw()
+  # notera mälargäddan, kan vara mange som live-reggar i efterhand - syns med och utan hans anvid
+
+# tider på dagar, månad, etc.. 
+# EFTERREG vs LIVE - visas på kartan
+# Behöver lista på vilka användare som rapporterat turer för att se vilka som ska få en dagbok.
+
+
+# odlad (behöver brytas ner per område och se till att NA inte tas med...)
+#odlad.fisk <- catches %>% rename(Art = ARTBEST) %>% dplyr::group_by(Art, ODLAD) %>% dplyr::summarize(N=n()) %>% 
+#  tidyr::pivot_wider(values_from = N, names_from = ODLAD, values_fill=0) %>% 
+
+#\newpage
+
+## Lista aktiva användare ####
+# Antal turer per anvid och år
+active.users <- trips %>% 
+  dplyr::group_by(ANVID, Year) %>% 
+  dplyr::summarize(N.trips=n()) %>% 
+  tidyr::pivot_wider(., names_from=Year, values_from=N.trips, values_fill = list(N.trips = 0)) %>%
+  ungroup()
+# lägg till infon till användarlistan (och sätt in i Excel för bra översikt)
+users.export <- dplyr::left_join(users, active.users, by=c("ANV.NAMN"="ANVID")) %>%
+  arrange(EPOST) 
+
+# write.table(users.export, "clipboard-18488", row.names=F, quote=F, sep="\t")
+
+
+```
+
+## För perioden `r first_date` -  `r last_date`
+
+Under perioden  har `r nusers` användare registrerat sig. Totalt har det rapporterats in `r ntrips` fisketurer, `r nfish` fångster och `r nother` interaktioner med säl och skarv. 
+
+
+```{r table1, echo=FALSE}
+cap <- sprintf("Användare per organisation")
+knitr::kable(users_tab, caption = cap)
+```
+
+```{r table2, echo=FALSE}
+cap <- sprintf("Fisketurer per område och år")
+knitr::kable(trips_tab_chr, caption = cap)
+```
+
+```{r table3, echo=FALSE}
+cap <- sprintf("Målarter per område och år. Värdet anger antalet gånger arten har satts som målart för en fisketur.")
+knitr::kable(target_tab_chr2, caption = cap)
+```
+
+
+```{r table4, echo=FALSE}
+cap <- sprintf("Fiskar (antal individer oavsett art) per område och år")
+knitr::kable(catch_tab_chr, caption = cap)
+```
+
+
+```{r table5, echo=FALSE}
+cap <- sprintf("Antal registrerade fiskar, deras medel- och maxlängd (cm) och högsta vikt (gram)")
+knitr::kable(species_tab, caption = cap)
+```
+
+## Indikatorer och längdfördelningar
+
+
+```{r table6, echo=FALSE}
+cap <- sprintf("Längdindikatorer gädda")
+knitr::kable(Lindicators.pike, caption = cap)
+```
+
+
+```{r length_dist1, fig.cap="Storleksfördelning gädda per område", echo=FALSE, fig.width=5, fig.height=7}
+Fig1 <- catches.trips %>% filter(ARTBEST %in% c("Gädda"), # "Abborre", "Öring", "Röding", "Lax" "Gös", "Harr" separat
+                                 !FANGOMR=="Vättern") %>% droplevels() %>%
+    ggplot(., aes(x=LANGD)) +
+    geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
+    scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    xlab("Längd (cm)") + ylab("Antal fiskar") +
+    guides(fill = "none", alpha = "none") + ggthemes::theme_clean() +
+    theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
+    facet_grid(rows=vars(FANGOMR), scales="free", cols=vars(ARTBEST))
+print(Fig1)
+```
+
+
+```{r length_dist2, fig.cap="Storleksfördelning öring per område", echo=FALSE, fig.width=5, fig.height=5}
+Fig2 <- catches.trips %>% filter(ARTBEST %in% c("Öring"), # skippa gäddan, för få
+                                 FANGOMR %in% c("Kust", "Vänern", "Vättern", "ÖVrigt vatten")) %>% droplevels() %>%
+    ggplot(., aes(x=LANGD)) +
+    geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
+    scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    xlab("Längd (cm)") + ylab("Antal fiskar") +
+    guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
+    theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
+    facet_grid(rows=vars(FANGOMR), cols=vars(ARTBEST), scales="free")
+print(Fig2)
+```
+
+```{r length_dist3, fig.cap="Storleksfördelning abborre per område", echo=FALSE, fig.width=5, fig.height=3}
+Fig3 <- catches.trips %>% filter(ARTBEST %in% c("Abborre"), 
+                                 FANGOMR %in% c("Kust", "Mälaren")) %>% droplevels() %>%
+    ggplot(., aes(x=LANGD)) +
+    geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
+    scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    xlab("Längd (cm)") + ylab("Antal fiskar") +
+    guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
+    theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
+    facet_grid(rows=vars(FANGOMR), scales="free", cols=vars(ARTBEST))
+print(Fig3)
+```
+
+
+```{r length_dist4, fig.cap="Storleksfördelning Vättern", echo=FALSE, fig.width=7, fig.height=5}
+Fig4 <- catches.trips %>% filter(ARTBEST %in% c("Röding", "Öring", "Lax"), FANGOMR=="Vättern") %>% droplevels() %>%
+    ggplot(., aes(x=LANGD)) +
+    geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
+    scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    xlab("Längd (cm)") + ylab("Antal fiskar") +
+    guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
+    theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
+    facet_grid(rows=vars(FANGOMR), scales="free", cols=vars(ARTBEST))
+print(Fig4)
+```
+
+
+```{r length_dist5, fig.cap="Storleksfördelning Vänern", echo=FALSE, fig.width=7, fig.height=5}
+Fig5 <- catches.trips %>% filter(ARTBEST %in% c("Gädda", "Lax", "Öring"), 
+                                 FANGOMR %in% c("Vänern")) %>% droplevels() %>%
+    ggplot(., aes(x=LANGD)) +
+    geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
+    scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    xlab("Längd (cm)") + ylab("Antal fiskar") +
+    guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
+    theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
+    facet_grid(rows=vars(FANGOMR), scales="free", cols=vars(ARTBEST))
+print(Fig5)
+```
+
+
+\newpage
+## Kartor
+ 
+
+```{r map_overview, echo=FALSE, fig.cap="Rapporterade startpositioner för alla turer under perioden", fig.width=8, fig.height=8}
+# need extra step to handle some coordinates that are clearly wrong..
+pal <- c("#56B4E9", "#009E73", "#F0E442", "#0072B2", "#E69F00", "#D55E00") # denna från fiskbarometerns instruktioner
+pal2 <- c("#007681", "#509e2f", "#fce300", "#996017", "#ff585d", "#6ad1e3", "#53565a") # denna från SLU:s färgpalett
+
+
+koords <- rbind(trips[,c("POSITIONE", "POSITIONN")], catches[,c("POSITIONE","POSITIONN")])
+koords2 <- filter(koords, POSITIONN >45)
+# 
+bbox <- sporeg_bbox(koords2, buffer=1) 
+upperleft <- c(bbox["top"], bbox["left"])
+lowerright <- c(bbox["bottom"], bbox["right"])
+map_os <- OpenStreetMap::openproj(
+  OpenStreetMap::openmap(upperleft, lowerright, type="osm"),
+  projection = "EPSG:4326")
+bgmap <-  raster::raster(map_os)
+# first map of trips
+map.trips <- ggplot2::ggplot() +
+  terrainr::geom_spatial_rgb(
+    data = bgmap,
+    aes(x = x, y = y, r = red, g = green, b = blue)) +
+  ggplot2::geom_point(data = filter(trips, POSITIONN >45, !MALART %in% c("Björkna", "Id", "Storspigg", "Asp")),
+    aes(x = POSITIONE, y = POSITIONN, col=EFTERREGISTRERING), alpha=0.4,
+    size = 3, show.legend = T) +
+  scale_color_manual(values = pal2[c(2,5)]) +
+   ggplot2::theme_bw() +
+  ggplot2::coord_cartesian() + 
+  theme(legend.position="bottom")
+print(map.trips)
+```
+
+
+```{r map_overview2, echo=FALSE, fig.cap="Rapporterade fångstpositioner per art", fig.width=8, fig.height=8}
+# map of catches
+map.catches <- ggplot2::ggplot() +
+  terrainr::geom_spatial_rgb(
+    data = bgmap,
+    aes(x = x, y = y, r = red, g = green, b = blue)) +
+  ggplot2::geom_point(data = filter(catches, POSITIONN >45, !ARTBEST %in% c("Björkna", "Id", "Storspigg", "Asp")),
+    aes(x = POSITIONE, y = POSITIONN, col=ARTBEST),
+    size=3, alpha=0.4, show.legend = T) +
+  #scale_color_manual(values = pal2) +
+  scale_color_manual(values = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c")) +
+#fdbf6f
+#ff7f00
+#cab2d6
+#6a3d9a
+#ffff99
+#b15928))
+  ggplot2::theme_bw() +
+  ggplot2::coord_cartesian() + 
+  theme(legend.position="bottom", legend.title=element_blank())
+print(map.catches)
+```
+
+
+```{r map_overview3, echo=FALSE, fig.cap="Rapporterade positioner för övriga händelser", fig.width=8, fig.height=8}
+# map of other"
+# Note that coordinates for other are not checked and could be outside trip and catches...
+map.other <- ggplot2::ggplot() +
+  terrainr::geom_spatial_rgb(
+    data = bgmap,
+    aes(x = x, y = y, r = red, g = green, b = blue)) +
+  ggplot2::geom_point(data = other,
+    aes(x = POSITIONE, y = POSITIONN, col=HANDELSE),
+    size=3, alpha=0.8, show.legend = T) +
+  scale_color_manual(values = pal2[c(5,7)]) +
+  ggplot2::theme_bw() +
+  ggplot2::coord_cartesian() + 
+  theme(legend.position="bottom", legend.title=element_blank())
+print(map.other)
+```

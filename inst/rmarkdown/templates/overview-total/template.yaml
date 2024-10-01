@@ -1,0 +1,4 @@
+name: Spöreg total overview report (sporegr)
+description: >
+   Create overview of all data in Spöreg.
+create_dir: FALSE

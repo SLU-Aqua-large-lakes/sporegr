@@ -102,7 +102,6 @@ read_ovrighandelse_clean <- function() {
 #' Read a file with APEX export of fångster from Spöreg database and do some cleanup
 #'
 #' The function uses file extension to select how the file should be read.
-#' Known extensions are .csv and .xlsx.
 #'
 #' @return
 #' Return a tibble
@@ -117,12 +116,7 @@ read_fangst_clean <- function() {
                 "text", "logical", "numeric", "numeric", "date",
                  "text", "text", "text", "text", "text")
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$fangst)
-  fext <- tools::file_ext(file_name)
-  if (fext == "csv") {
-    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
-  } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name, col_types = coltypes)
-  }
+  rawdata <- readxl::read_excel(file_name, col_types = coltypes)
   res <- rawdata %>%
     dplyr::rename_with(.fn = .fix_names) %>%
     dplyr::mutate(LANGD = .choose_VALUE(MATTLANGD, ESTLANGD),

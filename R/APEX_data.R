@@ -99,19 +99,13 @@ read_resa_clean <- function() {
 #' ovr <- read_ovrighandelse_clean()
 #' }
 read_ovrighandelse_clean <- function() {
+  coltypes <- c("text", "date", "numeric", "numeric", "numeric", "text")
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$ovrighandelse)
   fext <- tools::file_ext(file_name)
   if (fext == "csv") {
     rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
   } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name) %>%
-      dplyr::mutate(SPOREGOVHAND_STARTDATTID =
-                      base::format(SPOREGOVHAND_STARTDATTID,
-                                   format = "%Y-%m-%d %H:%M")) %>%
-      dplyr::mutate(SPOREGOVHAND_STARTDATTID =
-                      dplyr::if_else(is.na(SPOREGOVHAND_STARTDATTID),
-                                     "",
-                                     SPOREGOVHAND_STARTDATTID))
+    rawdata <- readxl::read_excel(file_name, col_types = coltypes)
   }
   res <- rawdata %>%
     dplyr::rename_with(.fn = .fix_names) %>%
@@ -132,19 +126,15 @@ read_ovrighandelse_clean <- function() {
 #' fangst <- read_fangst_clean()
 #' }
 read_fangst_clean <- function() {
+  coltypes <- c("text", "numeric", "numeric", "numeric", "numeric",
+                "text", "logical", "numeric", "numeric", "date",
+                 "text", "text", "text", "text", "text")
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$fangst)
   fext <- tools::file_ext(file_name)
   if (fext == "csv") {
     rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
   } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name) %>%
-      dplyr::mutate(SPOREGIND_FANGSTDATTID =
-                      base::format(SPOREGIND_FANGSTDATTID,
-                                   format = "%Y-%m-%d %H:%M")) %>%
-      dplyr::mutate(SPOREGIND_FANGSTDATTID =
-                      dplyr::if_else(is.na(SPOREGIND_FANGSTDATTID),
-                                           "",
-                                           SPOREGIND_FANGSTDATTID))
+    rawdata <- readxl::read_excel(file_name, col_types = coltypes)
   }
   res <- rawdata %>%
     dplyr::rename_with(.fn = .fix_names) %>%
@@ -155,9 +145,10 @@ read_fangst_clean <- function() {
     dplyr::select(UUID, ARTBEST, FANGSTDATTID, LANGD, is_est_LANGD,
                   VIKT, is_est_VIKT, ATERUTSATT, ODLAD, MARKNING, KLIPPTFENAHOGER,
                   KLIPPTFENAVANSTER, AVVIKELSE, POSITIONN, POSITIONE) %>%
-    dplyr::mutate(Hour = lubridate::hour(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
-                  Minute = lubridate::minute(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")))
-  return(res)
+    dplyr::mutate(Hour = lubridate::hour(FANGSTDATTID),
+                  Minute = lubridate::minute(FANGSTDATTID))
+#  Minute = lubridate::minute(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")))
+return(res)
   }
 
 #' Fix missing datetime on fangster

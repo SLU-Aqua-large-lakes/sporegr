@@ -81,7 +81,6 @@ read_resa_clean <- function() {
 #' Read a file with APEX export of Övrighändelse from Spöreg database and do some cleanup
 #'
 #' The function uses file extension to select how the file should be read.
-#' Known extensions are .csv and .xlsx.
 #'
 #' @return
 #' Return a tibble
@@ -94,12 +93,7 @@ read_resa_clean <- function() {
 read_ovrighandelse_clean <- function() {
   coltypes <- c("text", "date", "numeric", "numeric", "numeric", "text")
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$ovrighandelse)
-  fext <- tools::file_ext(file_name)
-  if (fext == "csv") {
-    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
-  } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name, col_types = coltypes)
-  }
+  rawdata <- readxl::read_excel(file_name, col_types = coltypes)
   res <- rawdata %>%
     dplyr::rename_with(.fn = .fix_names) %>%
     dplyr::select(UUID, STARTDATTID, ANTAL, POSITIONN, POSITIONE, HANDELSE)

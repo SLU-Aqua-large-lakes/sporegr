@@ -55,7 +55,6 @@ APEX_options <- function(...){
 #' The location of the file read is predefined with but can be changed with
 #' the function [APEX_options()].
 #' The function uses file extension to select how the file should be read.
-#' Known extensions are .csv and .xlsx.
 #'
 #' @return
 #' Return a tibble
@@ -67,13 +66,7 @@ APEX_options <- function(...){
 #' }
 read_resa_clean <- function() {
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$resa)
-    fext <- tools::file_ext(file_name)
-  if (!(fext %in% c("csv", "xlsx")))  stop("unknown file type")
-  if (fext == "csv") {
-    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
-  } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name)
-  }
+  rawdata <- readxl::read_excel(file_name)
   res <- rawdata %>%
     dplyr::select(-ANV_ID, -SPOREGRESA_APPVERSION, -SPOREGSTOPP_STARTDATTID, - SPOREGSTOPP_STOPDATTID) %>%
     dplyr::rename_with(.fn = .fix_names) %>%

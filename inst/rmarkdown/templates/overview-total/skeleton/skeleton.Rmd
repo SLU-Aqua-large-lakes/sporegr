@@ -176,7 +176,7 @@ knitr::kable(trips_tab_chr, caption = cap)
 ```
 
 ```{r table3, echo=FALSE}
-cap <- sprintf("Målarter per område och år. Värdet anger antalet gånger arten har satts som målart för en fisketur.")
+cap <- sprintf("Målarter per område. Värdet anger antalet gånger arten har satts som målart för en fisketur.")
 knitr::kable(target_tab_chr2, caption = cap)
 ```
 

@@ -11,7 +11,6 @@ Return a tibble
 }
 \description{
 The function uses file extension to select how the file should be read.
-Known extensions are .csv and .xlsx.
 }
 \examples{
 \dontrun{

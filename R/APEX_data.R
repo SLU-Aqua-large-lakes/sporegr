@@ -55,7 +55,6 @@ APEX_options <- function(...){
 #' The location of the file read is predefined with but can be changed with
 #' the function [APEX_options()].
 #' The function uses file extension to select how the file should be read.
-#' Known extensions are .csv and .xlsx.
 #'
 #' @return
 #' Return a tibble
@@ -67,13 +66,7 @@ APEX_options <- function(...){
 #' }
 read_resa_clean <- function() {
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$resa)
-    fext <- tools::file_ext(file_name)
-  if (!(fext %in% c("csv", "xlsx")))  stop("unknown file type")
-  if (fext == "csv") {
-    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
-  } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name)
-  }
+  rawdata <- readxl::read_excel(file_name)
   res <- rawdata %>%
     dplyr::select(-ANV_ID, -SPOREGRESA_APPVERSION, -SPOREGSTOPP_STARTDATTID, - SPOREGSTOPP_STOPDATTID) %>%
     dplyr::rename_with(.fn = .fix_names) %>%
@@ -88,7 +81,6 @@ read_resa_clean <- function() {
 #' Read a file with APEX export of Övrighändelse from Spöreg database and do some cleanup
 #'
 #' The function uses file extension to select how the file should be read.
-#' Known extensions are .csv and .xlsx.
 #'
 #' @return
 #' Return a tibble
@@ -99,20 +91,9 @@ read_resa_clean <- function() {
 #' ovr <- read_ovrighandelse_clean()
 #' }
 read_ovrighandelse_clean <- function() {
+  coltypes <- c("text", "date", "numeric", "numeric", "numeric", "text")
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$ovrighandelse)
-  fext <- tools::file_ext(file_name)
-  if (fext == "csv") {
-    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
-  } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name) %>%
-      dplyr::mutate(SPOREGOVHAND_STARTDATTID =
-                      base::format(SPOREGOVHAND_STARTDATTID,
-                                   format = "%Y-%m-%d %H:%M")) %>%
-      dplyr::mutate(SPOREGOVHAND_STARTDATTID =
-                      dplyr::if_else(is.na(SPOREGOVHAND_STARTDATTID),
-                                     "",
-                                     SPOREGOVHAND_STARTDATTID))
-  }
+  rawdata <- readxl::read_excel(file_name, col_types = coltypes)
   res <- rawdata %>%
     dplyr::rename_with(.fn = .fix_names) %>%
     dplyr::select(UUID, STARTDATTID, ANTAL, POSITIONN, POSITIONE, HANDELSE)
@@ -121,7 +102,6 @@ read_ovrighandelse_clean <- function() {
 #' Read a file with APEX export of fångster from Spöreg database and do some cleanup
 #'
 #' The function uses file extension to select how the file should be read.
-#' Known extensions are .csv and .xlsx.
 #'
 #' @return
 #' Return a tibble
@@ -132,20 +112,11 @@ read_ovrighandelse_clean <- function() {
 #' fangst <- read_fangst_clean()
 #' }
 read_fangst_clean <- function() {
+  coltypes <- c("text", "numeric", "numeric", "numeric", "numeric",
+                "text", "logical", "numeric", "numeric", "date",
+                 "text", "text", "text", "text", "text")
   file_name <- file.path(APEX_options()$root_folder, APEX_options()$fangst)
-  fext <- tools::file_ext(file_name)
-  if (fext == "csv") {
-    rawdata <- utils::read.csv(file_name, fileEncoding = "latin1")
-  } else if (fext == "xlsx"){
-    rawdata <- readxl::read_excel(file_name) %>%
-      dplyr::mutate(SPOREGIND_FANGSTDATTID =
-                      base::format(SPOREGIND_FANGSTDATTID,
-                                   format = "%Y-%m-%d %H:%M")) %>%
-      dplyr::mutate(SPOREGIND_FANGSTDATTID =
-                      dplyr::if_else(is.na(SPOREGIND_FANGSTDATTID),
-                                           "",
-                                           SPOREGIND_FANGSTDATTID))
-  }
+  rawdata <- readxl::read_excel(file_name, col_types = coltypes)
   res <- rawdata %>%
     dplyr::rename_with(.fn = .fix_names) %>%
     dplyr::mutate(LANGD = .choose_VALUE(MATTLANGD, ESTLANGD),
@@ -155,9 +126,10 @@ read_fangst_clean <- function() {
     dplyr::select(UUID, ARTBEST, FANGSTDATTID, LANGD, is_est_LANGD,
                   VIKT, is_est_VIKT, ATERUTSATT, ODLAD, MARKNING, KLIPPTFENAHOGER,
                   KLIPPTFENAVANSTER, AVVIKELSE, POSITIONN, POSITIONE) %>%
-    dplyr::mutate(Hour = lubridate::hour(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")),
-                  Minute = lubridate::minute(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")))
-  return(res)
+    dplyr::mutate(Hour = lubridate::hour(FANGSTDATTID),
+                  Minute = lubridate::minute(FANGSTDATTID))
+#  Minute = lubridate::minute(as.POSIXlt(FANGSTDATTID,  format = "%Y-%m-%d %H:%M")))
+return(res)
   }
 
 #' Fix missing datetime on fangster

@@ -148,11 +148,11 @@ return(res)
 #' }
 fix_fangst_missing_fangstdattid <- function(f, r){
   r <- r %>%
-    dplyr::mutate(rdate = paste0(RESEDATUM, " 12:00:00")) %>%
+    dplyr::mutate(rdate = as.POSIXct(paste0(RESEDATUM, " 12:00:00"))) %>%
     dplyr::select(UUID, rdate)
   fixed_fangst <- f %>%
     dplyr::left_join(r, by = "UUID") %>%
-    dplyr::mutate(FANGSTDATTID = dplyr::if_else(FANGSTDATTID == "", rdate, FANGSTDATTID)) %>%
+    dplyr::mutate(FANGSTDATTID = dplyr::if_else(is.na(FANGSTDATTID), rdate, FANGSTDATTID)) %>%
     dplyr::select(-rdate)
   return(fixed_fangst)
 }

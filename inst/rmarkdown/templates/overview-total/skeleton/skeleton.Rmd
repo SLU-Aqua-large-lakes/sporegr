@@ -22,50 +22,64 @@ library(ggthemes)
 
 users <- sporegr::read_anvlista()
 nusers <- nrow(users)
+
 # Users by organisation table
 users_tab <- users %>%
   group_by(Organisation) %>%
   summarise(N = n()) %>%
   arrange(desc(N))
 
+### Trip data 
 trips <- sporegr::read_resa_clean()
 first_date <-  min(trips$RESEDATUM)
 last_date <- max(trips$RESEDATUM)
 ntrips <- nrow(trips)
+ntrips.live <- nrow(trips[trips$EFTERREGISTRERING=="N",])
+andeltrips.live <- round(ntrips.live/ntrips*100, 2)
+
+# Active users by year
+users_temp <- trips %>% 
+  group_by(ANVID, Year) %>% 
+  summarize(N.trips = n())
+users_tab2 <- users_temp %>% 
+  group_by(Year) %>% 
+  summarize('Aktiva användare' = n()) %>% 
+  rename(År = Year)
+
 # Trips by area and year table
 trips_tab1 <- trips %>%
   group_by(FANGOMR) %>%
   summarise(Totalt = n()) %>%
   arrange(desc(Totalt))
 trips_tab2 <- trips %>% 
-  group_by(FANGOMR, Year) %>% 
+  group_by(Year, FANGOMR) %>% 
   summarize(N=n()) %>% 
-  tidyr::pivot_wider(names_from="Year", values_from="N", values_fill=list(value=0))
+  arrange(desc(Year)) %>% 
+  tidyr::pivot_wider(names_from="Year", values_from="N", values_fill=list(N=0))
 trips_tab <- dplyr::left_join(trips_tab1, trips_tab2, by="FANGOMR")
   # add total row (in the following way all are converted to character so save as different object)
 trips_tab_chr <- rbind(trips_tab, c("Total", colSums(trips_tab[,2:dim(trips_tab)[[2]]], na.rm=T)))
 
 # Target species by area and year table
-target_tab1 <- trips %>%
+target_tab1 <-
+  trips %>%
   group_by(FANGOMR, MALART) %>%
   summarise(Totalt = n()) %>%
+  arrange(desc(Totalt)) %>% 
   tidyr::pivot_wider(names_from="MALART", values_from="Totalt", values_fill=list(Totalt=0)) %>% 
   arrange(desc(Gädda)) %>% ungroup()
 target_tab_chr <- rbind(target_tab1, c("Total", colSums(target_tab1[,2:dim(target_tab1)[[2]]], na.rm=T)))
-# Change order - manually for now
-target_tab_chr2 <- target_tab_chr[,c(1, 2, 6, 3, 8, 9, 4, 5)]
 
 
 
-# Catch data fix
+### Catch data 
 catches <- sporegr::read_fangst_clean()
 catches.trips <- dplyr::left_join(catches, trips, by="UUID")
 
-# Other events  #### 
+### Other events  
 other <- sporegr::read_ovrighandelse_clean()
 trips.other <- dplyr::left_join(trips, other, by="UUID")
 nother <- nrow(other)
-# 
 
 
 # Fish (number, regardless of species) by area and year table
@@ -75,18 +89,20 @@ catch_tab1 <- catches.trips %>%
   summarise(Totalt = n()) %>% 
   arrange(desc(Totalt))
 catch_tab2 <- catches.trips %>% 
-  group_by(FANGOMR, Year) %>% 
+  group_by(Year, FANGOMR) %>% 
   summarize(N=n()) %>% 
-  tidyr::pivot_wider(names_from="Year", values_from="N", values_fill=list(value=0))
+  arrange(desc(Year)) %>% 
+  tidyr::pivot_wider(names_from="Year", values_from="N", values_fill=list(N=0))
 catch_tab <- dplyr::left_join(catch_tab1, catch_tab2, by="FANGOMR")
 # add total row (in the following way all are converted to character so save as different object)
 catch_tab_chr <- rbind(catch_tab, c("Total", colSums(catch_tab[,2:dim(catch_tab)[[2]]], na.rm=T)))
 
 # Species total and size info table
 species_tab <- catches %>%
-  group_by(ARTBEST) %>%
+  mutate(Art = ARTBEST) %>% 
+  group_by(Art) %>%
   summarize(Totalt=n(), 
-            Medellängd = round(mean(LANGD, na.rm = TRUE),0), 
+            Medellängd = round(mean(LANGD, na.rm = TRUE), 0), 
             Maxlängd = max(LANGD, na.rm = TRUE),
             Maxvikt = max(VIKT, na.rm = TRUE), .groups = "drop") %>%
   mutate(Medellängd = if_else(is.infinite(Medellängd), as.numeric(NA), Medellängd),
@@ -96,64 +112,74 @@ species_tab <- catches %>%
 
 
 ####### Before moving on - manually check which species, areas and years that have enough data #####
-##species_by_area <- table(catches.trips$ARTBEST, catches.trips$FANGOMR)
+species_by_area <- table(catches.trips$ARTBEST, catches.trips$FANGOMR)
  # table(catches.trips$ARTBEST, catches.trips$FANGOMR, catches.trips$Year)
  # table(catches.trips$ARTBEST, catches.trips$FANGOMR)
  # table(catches.trips$ARTBEST, catches.trips$Year)
-## Start with pooled by area, for Gädda, Abborre, Öring, Röding, Lax, Gös och Harr
+## Start with pooled by area, for Gädda, Abborre, Öring, Röding, Lax, Gös och Harr - möjligen makrill också
  
 ## FÖRSLAG - kör figurer först per art (för relevanta områden) och sen per område
-# 1 gädda med FANGOMR som kolumner. Ej Vättern
+# 1 gädda med FANGOMR som kolumner. 
 # 2 öring Kust, Vänern, Vättern och ÖVrigt vatten
 # 3 abborre, Kust, Mälaren, 
-# 4 Vättern, röding, och då ta med öring och lax
+# 4 Vättern, röding, och då ta med öring och lax - akta enstaka fisk i andra vatten
 # 5 Vänern, gädda, lax, öring  
 
 #### Beräkna även indikatorer ####
-## Börja med längd för utvalda arter enligt:
 Lindicators.pike <- catches.trips %>% 
-  filter(ARTBEST=="Gädda", !FANGOMR=="Vättern") %>% 
+  filter(ARTBEST=="Gädda") %>% 
   drop_na(LANGD) %>% # en användare som bulkreggat gäddor utan langd, behöver ta bort sådana
   mutate(meterfisk = ifelse(LANGD>=100, 1, 0)) %>% 
   group_by(FANGOMR) %>% 
-  summarize(Antal.fiskar =n(),
+  summarize('Antal fiskar' =n(),
             L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
             L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
             L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
-            Andel.meterfisk = round(sum(meterfisk)/Antal.fiskar*100, 1))
+            'Andel >100cm' = round(sum(meterfisk)/n()*100, 1))
+
+# Öring
+Lindicators.trout <- catches.trips %>% 
+  filter(ARTBEST=="Öring") %>% 
+  drop_na(LANGD) %>% 
+  mutate(halvmeterfisk = ifelse(LANGD>=50, 1, 0)) %>% 
+  group_by(FANGOMR) %>% 
+  summarize('Antal fiskar' =n(),
+            L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
+            L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
+            L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
+            'Andel >50cm' = round(sum(halvmeterfisk)/n()*100, 1))
+
+# Röding
+Lindicators.char <- catches.trips %>% 
+  filter(ARTBEST=="Röding") %>% 
+  drop_na(LANGD) %>% 
+  mutate(halvmeterfisk = ifelse(LANGD>=50, 1, 0)) %>% 
+  group_by(FANGOMR) %>% 
+  summarize('Antal fiskar' =n(),
+            L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
+            L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
+            L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
+            'Andel >50cm' = round(sum(halvmeterfisk)/n()*100, 1))
   
   
 ### Finns många fler saker att lägga in, tex
-# övrig händelse
-# karta - påbörjat för resa och fångst
-# odlingsinfo
-# återutsättning
-# estimerad vs uppmätt längd (och vikt)
-# vikt-längdförhållanden
-# tider på dygnet - tex så här: hour.plot <- catches.trips %>% filter(!ARTBEST %in% c("Asp", "Björkna", "Id", "Storspigg", "Gös", "Harr") & Year>2021) %>% ggplot(., aes(Hour)) + geom_histogram(binwidth=1, fill="#56B4E9",color="black") + facet_grid(rows=vars(FANGOMR), cols=vars(ARTBEST), scales="free_y") +  theme_bw()
-  # notera mälargäddan, kan vara mange som live-reggar i efterhand - syns med och utan hans anvid
-
-# tider på dagar, månad, etc.. 
-# EFTERREG vs LIVE - visas på kartan
-# Behöver lista på vilka användare som rapporterat turer för att se vilka som ska få en dagbok.
+# övrig händelse - antal per plats och säsong kanske?
+# odlingsinfo - aktuellt from 2025 
+# tider på dygnet - tex så här: 
+# hour.plot <- catches.trips %>% filter(ARTBEST %in% c("Lax", "Röding", "Öring", "Gädda") & Year>2021 & EFTERREGISTRERING=="N") %>% ggplot(., aes(Hour)) + geom_histogram(binwidth=1, fill="#56B4E9",color="black") + facet_grid(rows=vars(FANGOMR), cols=vars(ARTBEST), scales="free_y") +  theme_bw()
+# Men beakta: Vi vet när fisken reggats (under en live-tur) via FANGSTDATTID (hour), men inte när turerna körts - vilka tider. Dvs behöver justera för efforten på något sätt. 
+### notera mälargäddan! Beror till stor del på mange som live-reggar i efterhand - syns med och utan hans anvid
 
 
-# odlad (behöver brytas ner per område och se till att NA inte tas med...)
-#odlad.fisk <- catches %>% rename(Art = ARTBEST) %>% dplyr::group_by(Art, ODLAD) %>% dplyr::summarize(N=n()) %>% 
-#  tidyr::pivot_wider(values_from = N, names_from = ODLAD, values_fill=0) %>% 
-
-#\newpage
-
-## Lista aktiva användare ####
+## Lista aktiva användare tillbaka till Excelfilen ####
 # Antal turer per anvid och år
 active.users <- trips %>% 
-  dplyr::group_by(ANVID, Year) %>% 
+  dplyr::group_by(Year, ANVID) %>% 
   dplyr::summarize(N.trips=n()) %>% 
-  tidyr::pivot_wider(., names_from=Year, values_from=N.trips, values_fill = list(N.trips = 0)) %>%
+  tidyr::pivot_wider(., names_from=Year, values_from=N.trips, values_fill=list(N.trips = 0)) %>%
   ungroup()
 # lägg till infon till användarlistan (och sätt in i Excel för bra översikt)
-users.export <- dplyr::left_join(users, active.users, by=c("ANV.NAMN"="ANVID")) %>%
-  arrange(EPOST) 
+users.export <- dplyr::left_join(users, active.users, by=c("ANV.NAMN"="ANVID")) 
 
 # write.table(users.export, "clipboard-18488", row.names=F, quote=F, sep="\t")
 
@@ -163,12 +189,30 @@ users.export <- dplyr::left_join(users, active.users, by=c("ANV.NAMN"="ANVID")) 
 ## För perioden `r first_date` -  `r last_date`
 
 Under perioden  har `r nusers` användare registrerat sig. Totalt har det rapporterats in `r ntrips` fisketurer, `r nfish` fångster och `r nother` interaktioner med säl och skarv. 
+Av fisketurerna har `r ntrips.live` live-registrerats (`r andeltrips.live` %).
 
 
-```{r table1, echo=FALSE}
+```{r table1a, echo=FALSE}
 cap <- sprintf("Användare per organisation")
 knitr::kable(users_tab, caption = cap)
 ```
+
+```{r table1b, echo=FALSE}
+cap <- sprintf("Antal aktiva användare per år, dvs hur många har registrerat minst en fisketur")
+knitr::kable(users_tab2, caption = cap)
+```
+
+```{r trip_freq, fig.cap="Frekvensdiagram av antal rapporterade fisketurer per användare och år", echo=FALSE, fig.width=3, fig.height=3}
+Fig0 <- ggplot(users_temp, aes(N.trips)) + 
+  geom_histogram(binwidth=1, boundary=0, closed="left", fill="#56B4E9",color="black") +
+    scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    xlab("Fisketurer per användare och år") + ylab("Antal") +
+    guides(fill = "none", alpha = "none") + ggthemes::theme_clean() +
+    theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA))
+    #facet_grid(rows=vars(FANGOMR), scales="free", cols=vars(ARTBEST))
+print(Fig0)
+```
+
 
 ```{r table2, echo=FALSE}
 cap <- sprintf("Fisketurer per område och år")
@@ -177,7 +221,7 @@ knitr::kable(trips_tab_chr, caption = cap)
 
 ```{r table3, echo=FALSE}
 cap <- sprintf("Målarter per område. Värdet anger antalet gånger arten har satts som målart för en fisketur.")
-knitr::kable(target_tab_chr2, caption = cap)
+knitr::kable(target_tab_chr, caption = cap)
 ```
 
 
@@ -192,8 +236,8 @@ cap <- sprintf("Antal registrerade fiskar, deras medel- och maxlängd (cm) och h
 knitr::kable(species_tab, caption = cap)
 ```
 
-## Indikatorer och längdfördelningar
-
+\newpage
+## Per art
 
 ```{r table6, echo=FALSE}
 cap <- sprintf("Längdindikatorer gädda")
@@ -201,9 +245,10 @@ knitr::kable(Lindicators.pike, caption = cap)
 ```
 
 
-```{r length_dist1, fig.cap="Storleksfördelning gädda per område", echo=FALSE, fig.width=5, fig.height=7}
-Fig1 <- catches.trips %>% filter(ARTBEST %in% c("Gädda"), # "Abborre", "Öring", "Röding", "Lax" "Gös", "Harr" separat
-                                 !FANGOMR=="Vättern") %>% droplevels() %>%
+```{r length_dist1, fig.cap="Storleksfördelning för gädda per område", echo=FALSE, fig.width=5, fig.height=7}
+Fig1 <- catches.trips %>% filter(ARTBEST %in% c("Gädda")) %>%  # "Abborre", "Öring", "Röding", "Lax" "Gös", "Harr" separat
+                                 #!FANGOMR=="Vättern") %>% 
+    droplevels() %>%
     ggplot(., aes(x=LANGD)) +
     geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
@@ -214,9 +259,14 @@ Fig1 <- catches.trips %>% filter(ARTBEST %in% c("Gädda"), # "Abborre", "Öring"
 print(Fig1)
 ```
 
+\newpage
+```{r table8, echo=FALSE}
+cap <- sprintf("Längdindikatorer öring")
+knitr::kable(Lindicators.trout, caption = cap)
+```
 
-```{r length_dist2, fig.cap="Storleksfördelning öring per område", echo=FALSE, fig.width=5, fig.height=5}
-Fig2 <- catches.trips %>% filter(ARTBEST %in% c("Öring"), # skippa gäddan, för få
+```{r length_dist2, fig.cap="Storleksfördelning för öring per område", echo=FALSE, fig.width=5, fig.height=5}
+Fig2 <- catches.trips %>% filter(ARTBEST %in% c("Öring"), 
                                  FANGOMR %in% c("Kust", "Vänern", "Vättern", "ÖVrigt vatten")) %>% droplevels() %>%
     ggplot(., aes(x=LANGD)) +
     geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
@@ -228,7 +278,7 @@ Fig2 <- catches.trips %>% filter(ARTBEST %in% c("Öring"), # skippa gäddan, fö
 print(Fig2)
 ```
 
-```{r length_dist3, fig.cap="Storleksfördelning abborre per område", echo=FALSE, fig.width=5, fig.height=3}
+```{r length_dist3, fig.cap="Storleksfördelning för abborre per område", echo=FALSE, fig.width=5, fig.height=3}
 Fig3 <- catches.trips %>% filter(ARTBEST %in% c("Abborre"), 
                                  FANGOMR %in% c("Kust", "Mälaren")) %>% droplevels() %>%
     ggplot(., aes(x=LANGD)) +
@@ -242,8 +292,16 @@ print(Fig3)
 ```
 
 
-```{r length_dist4, fig.cap="Storleksfördelning Vättern", echo=FALSE, fig.width=7, fig.height=5}
-Fig4 <- catches.trips %>% filter(ARTBEST %in% c("Röding", "Öring", "Lax"), FANGOMR=="Vättern") %>% droplevels() %>%
+\newpage
+## Per område
+```{r table9, echo=FALSE}
+cap <- sprintf("Längdindikatorer röding")
+knitr::kable(Lindicators.char, caption = cap)
+```
+
+```{r length_dist4, fig.cap="Storleksfördelning för arter i Vättern", echo=FALSE, fig.width=7, fig.height=5}
+Fig4 <- catches.trips %>% filter(ARTBEST %in% c("Röding", "Öring", "Lax"), 
+                                 FANGOMR=="Vättern") %>% droplevels() %>%
     ggplot(., aes(x=LANGD)) +
     geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
@@ -255,7 +313,7 @@ print(Fig4)
 ```
 
 
-```{r length_dist5, fig.cap="Storleksfördelning Vänern", echo=FALSE, fig.width=7, fig.height=5}
+```{r length_dist5, fig.cap="Storleksfördelning för arter i Vänern", echo=FALSE, fig.width=7, fig.height=5}
 Fig5 <- catches.trips %>% filter(ARTBEST %in% c("Gädda", "Lax", "Öring"), 
                                  FANGOMR %in% c("Vänern")) %>% droplevels() %>%
     ggplot(., aes(x=LANGD)) +
@@ -269,15 +327,32 @@ print(Fig5)
 ```
 
 
+```{r length_dist6, fig.cap="Storleksfördelning för arter i Mälaren", echo=FALSE, fig.width=7, fig.height=5}
+Fig6 <- catches.trips %>% filter(ARTBEST %in% c("Gädda", "Abborre", "Gös"), 
+                                 FANGOMR %in% c("Mälaren")) %>% droplevels() %>%
+  ggplot(., aes(x=LANGD)) +
+  geom_histogram(binwidth = 5, boundary=0, closed="left", fill="#56B4E9",color="black") +
+  scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+  xlab("Längd (cm)") + ylab("Antal fiskar") +
+  guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
+  theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
+  facet_grid(rows=vars(FANGOMR), scales="free", cols=vars(ARTBEST))
+print(Fig6)
+```
+
+
 \newpage
 ## Kartor
  
-
 ```{r map_overview, echo=FALSE, fig.cap="Rapporterade startpositioner för alla turer under perioden", fig.width=8, fig.height=8}
 # need extra step to handle some coordinates that are clearly wrong..
 pal <- c("#56B4E9", "#009E73", "#F0E442", "#0072B2", "#E69F00", "#D55E00") # denna från fiskbarometerns instruktioner
 pal2 <- c("#007681", "#509e2f", "#fce300", "#996017", "#ff585d", "#6ad1e3", "#53565a") # denna från SLU:s färgpalett
 
+
+# Behöver ge samma namn på koordinaterna för att kunna binda ihop positioner från resa och fångst:
+catches.trips$POSITIONE <- catches.trips$POSITIONE.x
+catches.trips$POSITIONN <- catches.trips$POSITIONN.x
 
 koords <- rbind(trips[,c("POSITIONE", "POSITIONN")], catches[,c("POSITIONE","POSITIONN")])
 koords2 <- filter(koords, POSITIONN >45)
@@ -297,7 +372,7 @@ map.trips <- ggplot2::ggplot() +
   ggplot2::geom_point(data = filter(trips, POSITIONN >45, !MALART %in% c("Björkna", "Id", "Storspigg", "Asp")),
     aes(x = POSITIONE, y = POSITIONN, col=EFTERREGISTRERING), alpha=0.4,
     size = 3, show.legend = T) +
-  scale_color_manual(values = pal2[c(2,5)]) +
+  scale_color_manual(values = pal2[c(1,5)]) +
    ggplot2::theme_bw() +
   ggplot2::coord_cartesian() + 
   theme(legend.position="bottom")
@@ -311,17 +386,14 @@ map.catches <- ggplot2::ggplot() +
   terrainr::geom_spatial_rgb(
     data = bgmap,
     aes(x = x, y = y, r = red, g = green, b = blue)) +
-  ggplot2::geom_point(data = filter(catches, POSITIONN >45, !ARTBEST %in% c("Björkna", "Id", "Storspigg", "Asp")),
-    aes(x = POSITIONE, y = POSITIONN, col=ARTBEST),
-    size=3, alpha=0.4, show.legend = T) +
+  ggplot2::geom_point(data = filter(catches, POSITIONN >45, 
+                                    # remove species that are caught in low numbers (and Björkna that is a test I think)
+                                    !ARTBEST %in% c("Björkna", "Id", "Storspigg")),
+                      aes(x = POSITIONE, y = POSITIONN, col=ARTBEST),
+                      size=3, alpha=0.6, show.legend = T) +
   #scale_color_manual(values = pal2) +
-  scale_color_manual(values = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c")) +
-#fdbf6f
-#ff7f00
-#cab2d6
-#6a3d9a
-#ffff99
-#b15928))
+  scale_color_manual(values = c("#1f78b4", "#1f78b4", "#a6cee3",  "gray", "#33a02c", "#fb9a99", "#b2df8a","#e31a1c", "gray", 
+                                "gray", "#ff7f00", "#cab2d6", "#6a3d9a", "darkred", "gray", "gray", "#b15928", "#fdbf6f", "#ffff99")) +
   ggplot2::theme_bw() +
   ggplot2::coord_cartesian() + 
   theme(legend.position="bottom", legend.title=element_blank())
@@ -329,8 +401,9 @@ print(map.catches)
 ```
 
 
+
 ```{r map_overview3, echo=FALSE, fig.cap="Rapporterade positioner för övriga händelser", fig.width=8, fig.height=8}
-# map of other"
+# map of other
 # Note that coordinates for other are not checked and could be outside trip and catches...
 map.other <- ggplot2::ggplot() +
   terrainr::geom_spatial_rgb(
@@ -344,4 +417,178 @@ map.other <- ggplot2::ggplot() +
   ggplot2::coord_cartesian() + 
   theme(legend.position="bottom", legend.title=element_blank())
 print(map.other)
+```
+
+
+
+\newpage
+## Övrigt
+```{r other1, fig.cap="Förhållandet mellan vikt och längd för ett urval arter och vatten.", echo=FALSE, message=FALSE, fig.width=7, fig.height=5}
+Fig.WL <- catches.trips %>% filter(ARTBEST %in% c("Abborre", "Gädda", "Gös", "Lax", "Öring") & 
+                                   FANGOMR %in% c("Kust", "Mälaren", "Vänern")) %>% droplevels() %>%
+ggplot(., aes(x=LANGD, y=VIKT, col=is_est_VIKT)) +
+  geom_point(size=2, alpha=0.6) +
+  geom_smooth(se=F, col="darkgrey") +
+  scale_color_manual(values = c("#56B4E9","#009E73","black")) +
+  scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+  xlab("Längd (cm)") + ylab("Vikt (g)") +
+  guides(fill = "none", alpha = "none") + theme_bw() + 
+  theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
+  facet_grid(rows=vars(FANGOMR), cols=vars(ARTBEST))
+ # Det är två gäddor från Lasse Lindahl som har fel vikt, på kusten, ska troligen vara 800 g, inte 8000...
+ # foo <- catches.trips[catches.trips$VIKT>7999 & catches.trips$ARTBEST=="Gädda" & catches.trips$VIKT>0 & catches.trips$FANGOMR=="Kust",]
+print(Fig.WL)
+```
+
+
+\newpage
+## Återutsättning
+```{r release_table, echo=FALSE, message=FALSE}
+## Create a table for release rates by species
+# Need to consider both "N" and "J" since default is "NA". I.e., the levels of ATERUTSATT varies with anvid.
+#fangst[is.na(fangst$ATERUTSATT), "ATERUTSATT"] <- "Ejangett"
+#fangst$ATERUTSATT <- factor(fangst$ATERUTSATT, levels=c("J", "N", "Ejangett"))
+t3 <- catches.trips %>%
+  rename(Art = ARTBEST) %>%
+  mutate(ATERUTSATT = if_else(is.na(ATERUTSATT), "N/A", ATERUTSATT)) %>%
+  mutate(ATERUTSATT = factor(ATERUTSATT, levels = c("J", "N", "N/A"))) %>%
+  dplyr::group_by(Art, ATERUTSATT) %>%
+  dplyr::summarize(N=n(), .groups = "drop") %>% 
+  tidyr::pivot_wider(values_from = N, names_from = ATERUTSATT, values_fill=0, names_expand = TRUE) 
+  
+
+cap <- "J = antal återutsatta, N = antal behållna och N/A = ej angett."
+knitr::kable(t3, caption = cap) 
+```
+
+## Vild/odlad
+Inställningen i appen för odlad eller vild fisk har till och med version 2.4.4. varit att fisken rapporteras som ODLAD = N om inget annat anges. Det innebär att andelen vild fisk riskerar att överskattas. Inställningen ändras från och med version 2.4.5.
+
+```{r odlad_table, echo=FALSE, message=FALSE}
+# Need to consider that default was "N" (ODLAD) up to and including 2024. From 2025 it is fixed to default=NA.
+# Code below considers only confirmed reared - needs to be changed for 2025 yearly report
+# Also need to check if there is salmon from the coast (or other waters).
+odlad.öring.vänern <- dim(catches.trips[catches.trips$ARTBEST=="Öring" & catches.trips$ODLAD=="J" & catches.trips$FANGOMR=="Vänern",])[1]
+höger.öring.vänern <- dim(catches.trips[catches.trips$ARTBEST=="Öring" & catches.trips$KLIPPTFENAHOGER=="J" & catches.trips$FANGOMR=="Vänern",])[1]
+vänster.öring.vänern <- dim(catches.trips[catches.trips$ARTBEST=="Öring" & catches.trips$KLIPPTFENAVANSTER=="J" & catches.trips$FANGOMR=="Vänern",])[1]
+
+odlad.lax.vänern <- dim(catches.trips[catches.trips$ARTBEST=="Lax" & catches.trips$ODLAD=="J" & catches.trips$FANGOMR=="Vänern",])[1]
+höger.lax.vänern <- dim(catches.trips[catches.trips$ARTBEST=="Lax" & catches.trips$KLIPPTFENAHOGER=="J" & catches.trips$FANGOMR=="Vänern",])[1]
+vänster.lax.vänern <- dim(catches.trips[catches.trips$ARTBEST=="Lax" & catches.trips$KLIPPTFENAVANSTER=="J" & catches.trips$FANGOMR=="Vänern",])[1]
+```
+
+I Vänern har det rapporterats `r odlad.öring.vänern` odlade öringar, varav `r höger.öring.vänern` också har rapporterats ha klippt bukfena höger, och 
+`r vänster.öring.vänern` klippt bukfena vänster.
+Motsvarande för lax är `r odlad.lax.vänern` odlade, varav `r höger.lax.vänern` med klippt bukfena höger och `r vänster.lax.vänern` klippt bukfena vänster.
+
+\newpage
+## CPUE
+Fångst per ansträngning (cpue) har beräknats som antal fiskar per spötimme, där spötimme = antal spön * antal timmar. För gädda finns tillräckligt med underlag för beräkning av fångst per ansträngning över datum. För övriga arter ges ett totalt genomsnitt per tur, med tillhörande variation (mätt som en standardavvikelse)
+
+```{r cpue_table, echo=FALSE, message=FALSE}
+## Create a table for cpue by species and area
+
+## First create a table of trips with zero catch
+zero_trips <- trips %>%
+  select(UUID, FANGOMR, ANVID, RESEDATUM, MALART, FISKEMINUTER, ANTALPERSONER) %>%
+    mutate(Effort = FISKEMINUTER/60 * ANTALPERSONER) %>%
+  left_join(catches %>% group_by(UUID) %>% summarise(Antal = n())) %>%
+  filter(is.na(Antal)) %>%
+  mutate(Antal = 0, cpue = 0) %>%
+  select(-FISKEMINUTER, -ANTALPERSONER)
+
+# To look at catch index we need to take MALART and FANGOMR into account, which only include trips with catch
+# That's why we add zero trips in the end
+cpuedata <- catches.trips %>% filter(MALART==ARTBEST) %>%
+  group_by(UUID, FANGOMR, ANVID, RESEDATUM, MALART) %>%
+  summarise(Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER),
+            Antal = n(),
+            cpue = round(Antal/Effort,2), 
+            .groups="drop") %>%
+  bind_rows(zero_trips)
+
+
+t.cpue <- cpuedata %>%
+  rename(Art = MALART) %>%
+  dplyr::group_by(Art, FANGOMR) %>%
+  dplyr::summarize(N=n(), 
+                   Medel = round(mean(cpue),2),
+                   SD = round(sd(cpue),2),
+                   Min = round(min(cpue),2),
+                   Max = round(max(cpue),2),
+                   .groups = "drop") %>% 
+  dplyr::filter(N>=10)
+  
+cap <- "CPUE per art och område (begränsat till N ≥10)"
+knitr::kable(t.cpue, caption = cap) 
+```
+
+
+```{r cpue-plot, fig.cap="Fångstindex per fiskedag för fisketurer efter gädda i Mälaren och på kusten, som ett exempel på spridningen i rådata", echo=FALSE, message=FALSE}
+
+## Plot catch index over time, by target species
+  cpue_per_date_plot <- cpuedata %>% 
+    filter(MALART %in% c("Gädda") & FANGOMR %in% c("Mälaren", "Kust")) %>% 
+    ggplot(., aes(x = RESEDATUM, y = cpue)) +
+    #geom_line(aes(col=ANVID), alpha = .5) +
+    geom_point(size=2, alpha = .3) + 
+    geom_smooth(se=F, method="loess", col="darkgrey") +
+    #geom_point(size=2, alpha = .7, aes(col=ANVID)) + 
+    facet_grid(scales = "free_y", rows = vars(MALART), cols = vars(FANGOMR)) +
+    ## date_breaks måste anpassas till hur många dagar man har,
+    ##calc_date_breaks() försöker fixa
+    scale_x_date(date_breaks =
+                   calc_date_breaks(first_date, last_date) ,
+                 date_labels = "%b-%d",
+                 guide = guide_axis(angle = 60), expand = expansion(mult = .02)) +
+    #scale_y_continuous(breaks = integer_breaks()) +
+    #scale_color_manual(values = SLUcolors::SLUpalette("wong_234516", color_names = FALSE)) +
+    theme_bw() +
+    theme(legend.position = "none") +
+    labs(fill="ANVID",
+         col="ANVID") +
+    ylab("Fångstindex") + xlab("") 
+    
+  print(cpue_per_date_plot)
+  
+```
+
+
+```{r cpue-other1, fig.cap="Fångstindex för gädda i Mälaren, som en funktion av antal skarv observerat under fisketuren", echo=FALSE, message=FALSE}
+
+## datafix
+  foo <- cpuedata %>% filter(MALART == "Gädda" & FANGOMR == "Mälaren")
+
+  cpue_other_data <- filter(trips.other, HANDELSE=="Skarv") %>% 
+                     select(UUID, HANDELSE, ANTAL) %>% 
+                     left_join(foo, ., by="UUID") %>% 
+                     mutate(ANTAL = ifelse(is.na(ANTAL), 0, ANTAL),
+                            Kvartal = lubridate::quarter(RESEDATUM))
+  # Helår
+skarv.plot <- ggplot(cpue_other_data, aes(x = ANTAL, y = sqrt(cpue))) +
+  geom_point(size=3, alpha = .7, col="#56B4E9") + 
+  geom_smooth(se=T, method="lm", col="darkgrey") +
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("R2", "p", "n"))) +
+  theme_bw() +
+  ylab("Fångstindex (rot-transformerat)") + xlab("Antal skarv") 
+  
+print(skarv.plot)
+  
+```
+
+
+```{r cpue-other2, fig.cap="Fångstindex för gädda i Mälaren per kvartal (1-4), som en funktion av antal skarv observerat under fisketuren", echo=FALSE, message=FALSE}
+
+  # Per kvartal
+skarv.plot2 <- ggplot(cpue_other_data, aes(x = ANTAL, y = sqrt(cpue))) +
+  geom_point(size=3, alpha = .7, col="#56B4E9") + 
+  geom_smooth(se=T, method="lm", col="darkgrey") +
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("R2", "p", "n"))) +
+  theme_bw() +
+  ylab("Fångstindex (rot-transformerat)") + xlab("Antal skarv") +
+  facet_wrap(~Kvartal)
+  
+    
+print(skarv.plot2)
+  
 ```

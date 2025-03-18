@@ -1,5 +1,5 @@
 ---
-title: "Användarrapport"
+title: "Fiskedagbok"
 author: "Spöreg"
 date: "`r Sys.Date()`"
 output:
@@ -10,13 +10,15 @@ header-includes:
   - \usepackage[labelfont=bf]{caption}
   - \usepackage{longtable}
   - \usepackage{booktabs}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
   - \captionsetup{justification=raggedright,singlelinecheck=false}
   - \renewcommand{\figurename}{Figur}
   - \renewcommand{\tablename}{Tabell}
   - \renewcommand{\contentsname}{Innehåll}
 params:
-  anvid: mange
-  year_no: 2024
+  anvid: petersfiske
+  year_no: 2025
 ---
 
 
@@ -29,21 +31,16 @@ library(dplyr)
 library(ggplot2)
 library(SLUcolors)
 library(rJava)
+library(tidyr)
 
-knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_chunk$set(warning = FALSE)
-knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
-#anvid <- "mange"
-#year_no <- 2022
-#month_no <- 8
 anvid <- params$anvid
 year_no <- params$year_no
 
 # Load and prep data using functions included in library(sporeg)
 # If needed change the path where APEX-exports are found.
-#
-#APEX_options(root_folder = "C:/your/full/path")
+# APEX_options(root_folder = "C:/your/full/path")
 resa <- read_resa_clean()  %>% filter(ANVID == anvid, Year == year_no)
 resor_uuid <- resa %>% pull(UUID) %>% unique()
 ovrighandelse <- read_ovrighandelse_clean() %>%
@@ -101,37 +98,9 @@ prcntmedium <- round(mediumgadda/Ngadda*100,2)
 
 Användare *`r anvid`* har under perioden `r first_date` till `r last_date` rapporterat `r nrow(resa)` turer och `r tot_fangst` fiskar.  
 
-`r if(is.öring>0){paste("Av totalt ", tot.öring, " rapporterade öringar, har ", odlad.öring, " rapporterats som odlade.", sep="")}`
-`r if(is.lax>0){paste("Av totalt ", tot.lax, " rapporterade laxar, har ", odlad.lax, " rapporterats som odlade.", sep="")}`
+`r if(is.öring>0){paste("Av totalt ", tot.öring, " rapporterade öringar har ", odlad.öring, " rapporterats som odlade.", sep="")}`
+`r if(is.lax>0){paste("Av totalt ", tot.lax, " rapporterade laxar har ", odlad.lax, " rapporterats som odlade.", sep="")}`
 `r if(is.gädda>0){paste("Av totalt ", Ngadda, " rapporterade gäddor var ", storgadda, " över en meter (", prcntstor, " %) och ", mediumgadda, " var över 75 cm (", prcntmedium, " %).", sep="")}`
-
-```{r map_overview, fig.cap="Rapporterad position för alla turer (röda symboler) och fångster (svarta cirklar).", fig.alt="Karta turer och fångster"}
-bbox <- sporeg_bbox(rbind(resa[,c("POSITIONE", "POSITIONN")], fangst[,c("POSITIONE","POSITIONN")])) 
-upperleft <- c(bbox["top"], bbox["left"])
-lowerright <- c(bbox["bottom"], bbox["right"])
-map_os <- OpenStreetMap::openproj(
-  OpenStreetMap::openmap(upperleft, lowerright, type="osm"),
-  projection = "EPSG:4326")
-
-bgmap <-  raster::raster(map_os)
-map <- ggplot2::ggplot() +
-  terrainr::geom_spatial_rgb(
-    data = bgmap,
-    aes(x = x, y = y, r = red, g = green, b = blue)) +
-  ggplot2::geom_point(data = resa, 
-    aes(x = POSITIONE, y = POSITIONN),
-    fill = "red", shape = 23,
-    size = 2, show.legend = FALSE) +
-  ggplot2::geom_point(data = fangst,
-    aes(x = POSITIONE, y = POSITIONN),
-    fill="black", shape = 21, 
-    size=3, alpha=0.4, show.legend = FALSE) +
-   ggplot2::theme_bw() +
-  ggplot2::coord_cartesian()
-print(map)
-```
-
-
 
 
 ```{r resa_summary_table}
@@ -166,7 +135,6 @@ kableExtra::kbl(resa_summary, caption = cap, booktabs = TRUE,
                       "HOLD_position"))
 #kableExtra::kbl(resa_summary, caption = cap)
 ```
-
 
 ```{r release_table}
 ## Create a table for release rates by species
@@ -211,8 +179,54 @@ kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
 #knitr::kable(fangst_per_art, caption = cap)
 ```
 
+```{r map_overview, fig.cap="Rapporterad startposition för alla turer under perioden", fig.width=8, fig.height=8}
+pal2 <- c("#007681", "#509e2f", "#fce300", "#996017", "#ff585d", "#6ad1e3", "#53565a") # denna från SLU:s färgpalett
+trips <- resa
+catches <- fangst
+koords <- rbind(trips[,c("POSITIONE", "POSITIONN")], catches[,c("POSITIONE","POSITIONN")])
+koords2 <- filter(koords, POSITIONN >45)
+bbox <- sporeg_bbox(koords2, buffer=0.05) 
+upperleft <- c(bbox["top"], bbox["left"])
+lowerright <- c(bbox["bottom"], bbox["right"])
+map_os <- OpenStreetMap::openproj(
+  OpenStreetMap::openmap(upperleft, lowerright, type="osm"),
+  projection = "EPSG:4326")
 
-```{r per-date-plot, fig.cap = "Fångst per resa"}
+bgmap <-  raster::raster(map_os)
+# first map of trips
+map.trips <- ggplot2::ggplot() +
+  terrainr::geom_spatial_rgb(
+    data = bgmap,
+    aes(x = x, y = y, r = red, g = green, b = blue)) +
+  ggplot2::geom_point(data = filter(trips, POSITIONN >45, !MALART %in% c("Björkna", "Id", "Storspigg", "Asp")),
+    aes(x = POSITIONE, y = POSITIONN, col=EFTERREGISTRERING), alpha=0.7,
+    size = 3, show.legend = T) +
+  scale_color_manual(values = pal2[c(4,5)]) +
+   ggplot2::theme_bw() +
+  ggplot2::coord_cartesian() + 
+  theme(legend.position="bottom")
+print(map.trips)
+```
+
+
+```{r map_overview2, echo=FALSE, fig.cap="Rapporterad fångstposition per art", fig.width=8, fig.height=8}
+# map of catches
+map.catches <- ggplot2::ggplot() +
+  terrainr::geom_spatial_rgb(
+    data = bgmap,
+    aes(x = x, y = y, r = red, g = green, b = blue)) +
+  ggplot2::geom_point(data = filter(catches, POSITIONN >45, !ARTBEST %in% c("Björkna", "Id", "Storspigg", "Asp")),
+    aes(x = POSITIONE, y = POSITIONN, col=ARTBEST),
+    size=3, alpha=0.6, show.legend = T) +
+  scale_color_manual(values = pal2) +
+  ggplot2::theme_bw() +
+  ggplot2::coord_cartesian() + 
+  theme(legend.position="bottom", legend.title=element_blank())
+print(map.catches)
+```
+
+
+```{r per-date-plot, fig.cap = "Fångst per fisketur"}
 #Create plot with catch per day. One panel per species caught
 calc_discrete_breaks <- function(x, max_breaks = 30) {
   mb <- min(length(x), max_breaks)
@@ -227,7 +241,45 @@ per_date_plot <- fangst_resa %>%
   arrange(RESEDATUM) %>%
   mutate(Date = factor(format(RESEDATUM, "%b-%d"), levels = trip_dates, ordered = TRUE)) %>%
   ggplot(.) +
-  geom_col(mapping = aes(x = Date, y = Antal), fill="gray80", color="black") +
+  geom_col(mapping = aes(x = Date, y = Antal), fill="#56B4E9", color="black") +
+  facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+  scale_x_discrete(breaks = calc_discrete_breaks(trip_dates),
+                   guide = guide_axis(angle = 60)) +
+  ## date_breaks måste anpassas till hur många dagar man har,
+  ## calc_date_breaks() försöker fixa
+##  scale_x_date(date_breaks = 
+##                 calc_date_breaks(first_date, last_date),
+##               date_labels = "%b-%d",
+##               guide = guide_axis(angle = 60), expand = c(0, 0)) +
+  scale_y_continuous(breaks = integer_breaks()) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlab("")
+
+if (have_fangst) {
+  print(per_date_plot)
+} else {
+  print("Inga fångster")
+}
+```
+
+
+```{r per-date-plot, fig.cap = "Fångst per fisketur"}
+#Create plot with catch per day. One panel per species caught
+calc_discrete_breaks <- function(x, max_breaks = 30) {
+  mb <- min(length(x), max_breaks)
+  res <- x[seq(from = 1, to = length(x), by = floor(length(x) / mb))]
+  return(res)
+}
+
+per_date_plot <- fangst_resa %>%
+  group_by(RESEDATUM, ARTBEST) %>%
+  summarise(Antal = n(), .groups = "drop") %>% 
+  bind_rows(zero_trips %>% select(RESEDATUM, ARTBEST = MALART, Antal)) %>%
+  arrange(RESEDATUM) %>%
+  mutate(Date = factor(format(RESEDATUM, "%b-%d"), levels = trip_dates, ordered = TRUE)) %>%
+  ggplot(.) +
+  geom_col(mapping = aes(x = Date, y = Antal), fill="#56B4E9", color="black") +
   facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
   scale_x_discrete(breaks = calc_discrete_breaks(trip_dates),
                    guide = guide_axis(angle = 60)) +
@@ -287,22 +339,50 @@ if (nrow(cpuedata) > 0) {
 
 
 
-
 ```{r length_dist, fig.cap="Antal fiskar per 2.5 cm längdgrupp"}
 length_dist <- fangst %>%
   group_by(ARTBEST) %>%
   mutate(n = n()) %>%
-  filter(n > 10)
+  filter(n > 9)
   
 if (nrow(length_dist) > 0) {
   length_plot <- ggplot(data = length_dist, mapping = aes(x = LANGD)) +
-    geom_histogram( binwidth = 2.5, boundary=0, closed="left", fill="gray80",color="black") +
+    geom_histogram( binwidth = 2.5, boundary=0, closed="left", fill="#56B4E9",color="black") +
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
-    facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
+    facet_grid(scales = "free", rows = vars(ARTBEST)) +
     xlab("Längd (cm)") + ylab("Antal fiskar") +
-    theme_bw()
+    guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
+    theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) 
   print(length_plot)
 } else {
   print("För få fångster för att plotta längdfördelning")
 }
+```
+
+
+ 
+```{r resa_catch_table}
+t1b <- resa %>% 
+  select(NAMN,RESEDATUM, FANGOMR, UUID)
+t2b <- fangst %>%
+  group_by(UUID, ARTBEST) %>%
+  summarise(Antal = n(),
+            .groups = "drop")
+
+resa_catch <- t1b %>%
+  right_join(t2b, by = c("UUID" = "UUID")) %>%
+   mutate(Namn =  substr(NAMN, 1, 17)) %>%
+     select(Namn, 
+            Datum = RESEDATUM,
+            Område = FANGOMR, 
+            Art = ARTBEST, 
+            Antal = Antal) %>% 
+  tidyr::pivot_wider(., names_from=Art, values_from=Antal, values_fill=0)
+
+cap <- paste0("Fångst per fisketur")
+kableExtra::kbl(resa_catch, caption = cap, booktabs = TRUE,
+                linesep="",
+                longtable = TRUE) %>%
+  kableExtra::kable_styling(
+    latex_options = c("repeat_header", "scale_down", "HOLD_position"))
 ```

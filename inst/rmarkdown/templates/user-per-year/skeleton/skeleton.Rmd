@@ -92,11 +92,18 @@ prcntstor <- round(storgadda/Ngadda*100,2)
 mediumgadda <- as.numeric(fangst %>% filter(ARTBEST=="Gädda" & LANGD>=75) %>% summarise(N=n()))
 prcntmedium <- round(mediumgadda/Ngadda*100,2)
 
+# Övrig händelse till inledande text
+ovr0 <- data.frame(HANDELSE = c("Skarv", "Säl"), Nfake = c(0, 0)) # make fake data frame
+ovr1 <- ovrighandelse %>% group_by(HANDELSE) %>% summarize(N=n()) # count observations for this anvid
+ovr2 <- left_join(ovr0, ovr1, by="HANDELSE") # join them
+n.skarv <- ifelse(is.na(ovr2[1,3]), 0, ovr2[1,3])
+n.sal <- ifelse(is.na(ovr2[2,3]), 0, ovr2[2,3])
+
 ```
 
 
 
-Användare *`r anvid`* har under perioden `r first_date` till `r last_date` rapporterat `r nrow(resa)` turer och `r tot_fangst` fiskar.  
+Användare *`r anvid`* har under perioden `r first_date` till `r last_date` rapporterat `r nrow(resa)` turer och `r tot_fangst` fiskar, `r n.skarv` skarvar (i vattnet) och `r n.sal` sälar.  
 
 `r if(is.öring>0){paste("Av totalt ", tot.öring, " rapporterade öringar har ", odlad.öring, " rapporterats som odlade.", sep="")}`
 `r if(is.lax>0){paste("Av totalt ", tot.lax, " rapporterade laxar har ", odlad.lax, " rapporterats som odlade.", sep="")}`
@@ -377,6 +384,8 @@ resa_catch <- t1b %>%
             Område = FANGOMR, 
             Art = ARTBEST, 
             Antal = Antal) %>% 
+  group_by(Namn, Datum, Område, Art) %>%
+  summarize(Antal = sum(Antal)) %>%   
   tidyr::pivot_wider(., names_from=Art, values_from=Antal, values_fill=0)
 
 cap <- paste0("Fångst per fisketur")

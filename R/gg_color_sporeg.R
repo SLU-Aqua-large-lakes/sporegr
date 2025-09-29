@@ -1,11 +1,19 @@
-### These functions set manual ggplot color scales conditional on names in Spöreg.
-
-# This ensures that each FANGOMR gets predesignated colors according to the standard in Fiskbarometern.
-# Could potentially also be used for ARTBEST/MALART
-
-# Replaces the use of e.g. "scale_colour_manual()" and "scale_fill_manual().
-#pal <- c("#56B4E9", "#009E73", "#F0E442", "#0072B2", "#E69F00", "#D55E00")
-
+#' Create discrete scales for sporegr
+#'
+#' These functions set manual ggplot color scales conditional on names in Spöreg.
+#'
+#' Replaces the use of e.g. "scale_colour_manual()" and "scale_fill_manual().
+#' pal <- c("#56B4E9", "#009E73", "#F0E442", "#0072B2", "#E69F00", "#D55E00")
+#'
+#' This ensures that each FANGOMR gets predesignated colors according to the standard in Fiskbarometern.
+#' Could potentially also be used for ARTBEST/MALART
+#'
+#' @param ...
+#'
+#' @name sporegr_scales
+#' @returns a ggplot2 color scale
+#' @export
+#'
 scale_color_sporeg <- function(...){
   ggplot2:::manual_scale(
     "color",
@@ -14,6 +22,8 @@ scale_color_sporeg <- function(...){
   )
 }
 
+#' @rdname sporegr_scales
+#' @export
 scale_fill_sporeg <- function(...){
   ggplot2:::manual_scale(
     "fill",
@@ -26,6 +36,8 @@ scale_fill_sporeg <- function(...){
 # These could also be put within the scale_color_sporeg above, but for clarity I make a second function
 # Needs to be updated as new species are included in the reported catch (this list per 2025 09 03)
 # Colors are not from Fiskbarometern, but from SLU color palette (https://internt.slu.se/globalassets/mw/stod-serv/kommmarkn.for/kommunikator/img/farg_2019.pdf)
+#' @rdname sporegr_scales
+#' @export
 scale_color_sporeg_art <- function(...){
   ggplot2:::manual_scale(
     "color",

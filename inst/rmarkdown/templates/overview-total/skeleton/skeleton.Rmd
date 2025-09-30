@@ -12,7 +12,6 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(warning = FALSE)
 
-#remotes::install_github("https://github.com/kagervall/sporegr", build_vignettes = TRUE)
 library(dplyr)
 library(tidyr)
 library(readxl)

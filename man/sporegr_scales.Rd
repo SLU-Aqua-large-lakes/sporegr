@@ -5,6 +5,7 @@
 \alias{scale_color_sporeg}
 \alias{scale_fill_sporeg}
 \alias{scale_color_sporeg_art}
+\alias{scale_fill_sporeg_art}
 \title{Create discrete scales for sporegr}
 \usage{
 scale_color_sporeg(...)
@@ -12,6 +13,8 @@ scale_color_sporeg(...)
 scale_fill_sporeg(...)
 
 scale_color_sporeg_art(...)
+
+scale_fill_sporeg_art(...)
 }
 \arguments{
 \item{...}{}

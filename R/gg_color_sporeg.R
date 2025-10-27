@@ -49,3 +49,17 @@ scale_color_sporeg_art <- function(...){
                         "Braxen", "Sarv", "Sandskädda", "Sutare", "Färna", "Ål"))
   )
 }
+
+#' @rdname sporegr_scales
+#' @export
+scale_fill_sporeg_art <- function(...){
+  ggplot2:::manual_scale(
+    "fill",
+    values = setNames(c("#154734", "#007681", "#fce300", "#509e2f", "#f6eb61", "#ff585d", "#ce0037", "#6ad1e3", "#d9d9d6", "#79863c",
+                        "#d9d9d6", "#53565a", "#ffb81c", "#4b3d2a", "#c4d600", "#888b8d", "#d8ed96", "#fbd7c9",
+                        "#672146", "#fbd7c9", "#996017", "#d8ed96", "#bbbcbc", "#000000"),
+                      c("Gädda", "Öring", "Gös", "Abborre", "Id", "Harr", "Röding", "Lax",  "Björkna", "Asp",
+                        "Storspigg", "Näbbgädda", "Makrill", "Pigghaj", "Torsk", "Gråsej", "Lyrtorsk", "Mört",
+                        "Braxen", "Sarv", "Sandskädda", "Sutare", "Färna", "Ål"))
+  )
+}

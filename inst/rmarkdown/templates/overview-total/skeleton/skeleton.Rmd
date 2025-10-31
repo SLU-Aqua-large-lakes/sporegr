@@ -19,7 +19,6 @@ library(ggplot2)
 library(sporegr)
 library(ggthemes)
 library(janitor)
-source("C:/R/sporegr/sporegr/R/gg_color_sporeg.R", encoding="UTF-8") # Ensure color by FANGOMR
 
 users <- sporegr::read_anvlista()
 nusers <- nrow(users)
@@ -101,7 +100,8 @@ catch_tab <- catches.trips %>%
   mutate(Totalt = sum(c_across(where(is.numeric)))) %>%
   ungroup() %>%
   adorn_totals("row", fill = "Totalt") %>%
-  relocate(Totalt, .after = FANGOMR) 
+  relocate(Totalt, .after = FANGOMR) %>% 
+  arrange(desc(Totalt))
 
 # Species total and size info table
 species_tab <- catches %>%
@@ -139,25 +139,32 @@ species_by_area <- table(catches.trips$ARTBEST, catches.trips$FANGOMR)
 Lindicators.pike <- catches.trips %>% 
   filter(ARTBEST=="Gädda") %>% 
   drop_na(LANGD) %>% # en användare som bulkreggat gäddor utan langd, behöver ta bort sådana
-  mutate(meterfisk = ifelse(LANGD>=100, 1, 0)) %>% 
+  mutate(meterfisk = ifelse(LANGD>=100, 1, 0),
+         storfisk  = ifelse(LANGD >=65, 1, 0)) %>% 
   group_by(FANGOMR, Year) %>% 
   summarize('Antal fiskar' =n(),
             L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
             L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
             L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
-            'Andel >100cm' = round(sum(meterfisk)/n()*100, 1))
+            'Andel >100cm' = round(sum(meterfisk)/n()*100, 1),
+            'Andel >65cm'  = round(sum(storfisk)/n()*100, 0),
+            M65 = round(mean(LANGD[LANGD>65], na.rm=T), 0)) %>% 
+  filter(`Antal fiskar` >9)
 
 # Öring
 Lindicators.trout <- catches.trips %>% 
   filter(ARTBEST=="Öring") %>% 
   drop_na(LANGD) %>% 
-  mutate(halvmeterfisk = ifelse(LANGD>=50, 1, 0)) %>% 
+  mutate(storfisk = ifelse(LANGD>=50, 1, 0)) %>% 
   group_by(FANGOMR, Year) %>% 
   summarize('Antal fiskar' =n(),
             L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
             L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
             L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
-            'Andel >50cm' = round(sum(halvmeterfisk)/n()*100, 1))
+            'Andel >50cm' = round(sum(storfisk)/n()*100, 0),
+            M50 = round(mean(LANGD[LANGD>50], na.rm=T), 0)) %>% 
+    filter(`Antal fiskar` >9)
+
 
 # Röding
 Lindicators.char <- catches.trips %>% 
@@ -169,8 +176,56 @@ Lindicators.char <- catches.trips %>%
             L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
             L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
             L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
-            'Andel >50cm' = round(sum(halvmeterfisk)/n()*100, 1))
+            'Andel >50cm' = round(sum(halvmeterfisk)/n()*100, 0),
+            M50 = round(mean(LANGD[LANGD>50], na.rm=T), 0)) %>% 
+    filter(`Antal fiskar` >9)
+
+
+# Lax
+Lindicators.salm <- catches.trips %>% 
+  filter(ARTBEST=="Lax") %>% 
+  drop_na(LANGD) %>% 
+  mutate(halvmeterfisk = ifelse(LANGD>=50, 1, 0)) %>% 
+  group_by(FANGOMR, Year) %>% 
+  summarize('Antal fiskar' =n(),
+            L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
+            L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
+            L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
+            'Andel >50cm' = round(sum(halvmeterfisk)/n()*100, 0),
+            M50 = round(mean(LANGD[LANGD>50], na.rm=T), 0)) %>% 
+    filter(`Antal fiskar` >9)
+
+
+# Gös
+Lindicators.gos <- catches.trips %>% 
+  filter(ARTBEST=="Gös") %>% 
+  drop_na(LANGD) %>% 
+  mutate(halvmeterfisk = ifelse(LANGD>=45, 1, 0)) %>% 
+  group_by(FANGOMR, Year) %>% 
+  summarize('Antal fiskar' =n(),
+            L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
+            L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
+            L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
+            'Andel >45cm' = round(sum(halvmeterfisk)/n()*100, 0),
+            M45 = round(mean(LANGD[LANGD>45], na.rm=T), 0)) %>% 
+    filter(`Antal fiskar` >9)
+
   
+# Abborre
+Lindicators.abbo <- catches.trips %>% 
+  filter(ARTBEST=="Abborre") %>% 
+  drop_na(LANGD) %>% 
+  mutate(halvmeterfisk = ifelse(LANGD>=25, 1, 0)) %>% 
+  group_by(FANGOMR, Year) %>% 
+  summarize('Antal fiskar' =n(),
+            L10 = round(quantile(LANGD, probs = c(0.1), na.rm=T),0),
+            L50 = round(quantile(LANGD, probs = c(0.5), na.rm=T), 0),
+            L90 = round(quantile(LANGD, probs = c(0.9), na.rm=T), 0),
+            'Andel >25cm' = round(sum(halvmeterfisk)/n()*100, 0),
+            M25 = round(mean(LANGD[LANGD>25], na.rm=T), 0)) %>% 
+    filter(`Antal fiskar` >9)
+
+    
   
 ### Finns många fler saker att lägga in, tex
 # övrig händelse - antal per plats och säsong kanske?
@@ -212,7 +267,7 @@ cap <- sprintf("Antal aktiva användare per år, dvs hur många har registrerat 
 knitr::kable(users_tab2, caption = cap)
 ```
 
-```{r trip_freq, fig.cap="Frekvensdiagram av antal rapporterade fisketurer per användare och år", echo=FALSE, fig.width=3, fig.height=3}
+```{r trip_freq, fig.cap="Frekvensdiagram av antal rapporterade fisketurer per användare och år", echo=FALSE, fig.width=5, fig.height=5}
 Fig0 <- ggplot(users_temp, aes(N.trips)) + 
   geom_histogram(binwidth=1, boundary=0, closed="left", fill="grey",color="black") +
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
@@ -240,14 +295,18 @@ cap <- sprintf("Fiskar (antal individer oavsett art) per område och år.")
 knitr::kable(catch_tab, caption = cap)
 ```
 
-
+\newpage
 ```{r table5, echo=FALSE}
 cap <- sprintf("Antal registrerade fiskar, deras medel- och maxlängd (cm) och högsta vikt (gram).")
 knitr::kable(species_tab, caption = cap)
 ```
 
 \newpage
-## Per art
+## Längddata - Per art
+
+Längdindikatorer som beräknats är kvantiler av längdfördelningen (L10-L50-L90, i cm), andelen fiskar över ett visst mått (i %) och medellängden för fiskar över detta mått (Mxx, anges i cm). Områden och år med färre än 10 individer har exkluderats. För att få en god precision i längdindikatorer behövs cirka 200-300 individer från ett standardiserat nätprovfiske. Hur många som behövs från Spöreg är okänt men borde ligga på en liknande nivå.
+
+Storleksfördelningar visas för ett urval arter och områden.
 
 ```{r table6, echo=FALSE}
 cap <- sprintf("Längdindikatorer gädda")
@@ -290,6 +349,12 @@ Fig2 <- catches.trips %>% filter(ARTBEST %in% c("Öring"),
 print(Fig2)
 ```
 
+\newpage
+```{r table9, echo=FALSE}
+cap <- sprintf("Längdindikatorer abborre")
+knitr::kable(Lindicators.abbo, caption = cap)
+```
+
 ```{r length_dist3, fig.cap="Storleksfördelning för abborre per område", echo=FALSE, fig.width=5, fig.height=3}
 Fig3 <- catches.trips %>% filter(ARTBEST %in% c("Abborre"), 
                                  FANGOMR %in% c("Kust", "Mälaren")) %>% droplevels() %>%
@@ -304,13 +369,24 @@ Fig3 <- catches.trips %>% filter(ARTBEST %in% c("Abborre"),
 print(Fig3)
 ```
 
-
 \newpage
-## Per område
-```{r table9, echo=FALSE}
+```{r table10, echo=FALSE}
 cap <- sprintf("Längdindikatorer röding")
 knitr::kable(Lindicators.char, caption = cap)
 ```
+
+```{r table11, echo=FALSE}
+cap <- sprintf("Längdindikatorer lax")
+knitr::kable(Lindicators.salm, caption = cap)
+```
+
+```{r table12, echo=FALSE}
+cap <- sprintf("Längdindikatorer gös")
+knitr::kable(Lindicators.gos, caption = cap)
+```
+
+\newpage
+## Längddata - Per område
 
 ```{r length_dist4, fig.cap="Storleksfördelning för arter i Vättern", echo=FALSE, fig.width=7, fig.height=5}
 Fig4 <- catches.trips %>% filter(ARTBEST %in% c("Röding", "Öring", "Lax"), 
@@ -469,27 +545,63 @@ print(map.other)
 
 \newpage
 ## Övrigt
-```{r other1, fig.cap="Förhållandet mellan vikt och längd för ett urval arter och vatten.", echo=FALSE, message=FALSE, fig.width=7, fig.height=5}
+```{r other1a, fig.cap="Förhållandet mellan vikt och längd för ett urval arter och vatten.", echo=FALSE, message=FALSE, fig.width=8, fig.height=8}
 Fig.WL <- catches.trips %>% filter(ARTBEST %in% c("Abborre", "Gädda", "Gös", "Lax", "Öring", "Röding"),
                                    FANGOMR %in% c("Kust", "Mälaren", "Vänern", "Vättern"),
                                    !is.na(VIKT), !is.na(LANGD)) %>% 
                             droplevels() %>%
-ggplot(., aes(x=LANGD, y=VIKT, col=is_est_VIKT)) +
+ggplot(., aes(x=LANGD, y=VIKT, col=ARTBEST)) + # col=is_est_VIKT)) +
   geom_point(size=2, alpha=0.6) +
   geom_smooth(se=F, col="black") +
-  scale_color_manual(values = c("#56B4E9","#009E73","black")) +
+  #scale_color_manual(values = c("#56B4E9","#009E73","black")) +
   scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
   xlab("Längd (cm)") + ylab("Vikt (g)") +
   guides(fill = "none", alpha = "none") + theme_bw() + 
   theme(legend.background = element_rect(color = NA), 
         plot.background=element_rect(color=NA),
         legend.position = "below") +
-  facet_grid(rows=vars(ARTBEST), cols=vars(FANGOMR), scales="free")
- # Det är två gäddor från Lasse Lindahl som har fel vikt, på kusten, ska troligen vara 800 g, inte 8000...
- # foo <- catches.trips[catches.trips$VIKT>7999 & catches.trips$ARTBEST=="Gädda" & catches.trips$VIKT>0 & catches.trips$FANGOMR=="Kust",]
+  #facet_grid(rows=vars(ARTBEST), cols=vars(FANGOMR), scales="free")
+  facet_wrap(~ARTBEST, scales="free") + 
+  scale_color_sporeg_art()
 print(Fig.WL)
+
 ```
 
+```{r other1b, fig.cap="Log-log-förhållandet mellan vikt och längd för ett urval arter och vatten.", echo=FALSE, message=FALSE, fig.width=8, fig.height=8}
+
+ # Det är två gäddor från Lasse Lindahl som har fel vikt, på kusten, ska troligen vara 800 g, inte 8000...
+ # foo <- catches.trips %>% filter(ANVID == "lassel", VIKT>7999, ARTBEST=="Gädda", FANGOMR=="Kust",)
+ # foo
+ # Även denna abborre ska ändras (petersfiske), från VIKT 3500 till 350:
+  # catches.trips %>% filter(ARTBEST=="Abborre", FANGOMR=="Kust", VIKT>3000)
+ # Ett gäng gäddor som fått vikter i kg istället för gram...:
+ # foo <- catches.trips %>% filter(ARTBEST=="Gädda", log(VIKT)<4)
+ ## Enklaste sätten att upptäcka detta är på log-log skala
+ ## Behöver ett litet script som identifierar potentiella problem och sen rutin för att åtgärda i databasen
+## Identifiera outliers med fel vikt-längd:
+bar <- catches.trips %>% 
+  filter(ARTBEST %in% c("Abborre", "Gädda", "Gös", "Lax", "Öring", "Röding"),
+         FANGOMR %in% c("Kust", "Mälaren", "Vänern", "Vättern"),
+         !is.na(VIKT), !is.na(LANGD)) %>% 
+  select(UUID, ARTBEST, LANGD, is_est_LANGD, VIKT, is_est_VIKT, ANVID, NAMN, RESEDATUM, FANGOMR, Year) %>% 
+  mutate(logL = log(LANGD),
+         logW = log(VIKT)) %>%
+  droplevels() 
+  
+WL.log <- ggplot(bar, aes(x=logL, y=logW, col=ARTBEST)) +
+  geom_point(size=2, alpha=0.6) + 
+  geom_smooth(method="lm", se=F, col="black") +
+  scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+  facet_wrap(~ARTBEST, scales="free") + 
+  guides(fill = "none", alpha = "none") + theme_bw() + 
+  theme(legend.background = element_rect(color = NA), 
+        plot.background=element_rect(color=NA),
+        legend.position = "none") +
+  scale_color_sporeg_art() + 
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("R2", "p", "n")), col="black") 
+
+print(WL.log)
+```
 
 \newpage
 ## Återutsättning
@@ -513,6 +625,7 @@ cap <- "J = antal återutsatta, N = antal behållna, N/A = ej angett och andel �
 knitr::kable(t3, caption = cap) 
 ```
 
+\newpage
 ## Vild/odlad
 Inställningen i appen för odlad eller vild fisk har till och med version 2.4.4. varit att fisken rapporteras som ODLAD = N om inget annat anges. Det innebär att andelen vild fisk riskerar att överskattas. Inställningen ändrades från och med version 2.4.5 och andelen vild blir korrekt beräknad från och med 2025.
 
@@ -569,146 +682,3 @@ knitr::kable(reared.tab, caption = cap)
 I Vänern har det för perioden rapporterats `r odlad.öring.vänern` odlade öringar, varav `r höger.öring.vänern` också har rapporterats ha klippt bukfena höger, och 
 `r vänster.öring.vänern` klippt bukfena vänster.
 Motsvarande för lax är `r odlad.lax.vänern` odlade, varav `r höger.lax.vänern` med klippt bukfena höger och `r vänster.lax.vänern` klippt bukfena vänster.
-
-\newpage
-## Fångstindex
-Fångst per ansträngning (cpue) har beräknats som antal fiskar per spötimme, där spötimme = antal spön * antal timmar. Beräkningen inkluderar endast turer där fångstart = målart och redovisas som genomsnitt per tur, med tillhörande variation (mätt som en standardavvikelse).
-
-```{r cpue_table, echo=FALSE, message=FALSE}
-## Create a table for cpue by species and area
-
-## First create a table of trips with zero catch, include EFTERREG to check if difference
-zero.trips <- trips %>%
-  select(UUID, FANGOMR, ANVID, Year, Quarter, Month, Day, RESEDATUM, MALART, EFTERREGISTRERING, FISKEMINUTER, ANTALPERSONER) %>%
-    mutate(Effort = FISKEMINUTER/60 * ANTALPERSONER) %>%
-  left_join(catches %>% group_by(UUID) %>% summarise(Antal = n())) %>%
-  filter(is.na(Antal)) %>%
-  mutate(Antal = 0, cpue = 0) %>%
-  select(-FISKEMINUTER, -ANTALPERSONER)
-
-# To look at catch index we need to take MALART and FANGOMR into account, which only include trips with catch
-# That's why we add zero trips in the end
-cpuedata <- catches.trips %>% filter(MALART==ARTBEST) %>%
-  group_by(UUID, FANGOMR, ANVID,Year, Quarter, Month, Day, RESEDATUM, MALART, EFTERREGISTRERING) %>%
-  summarise(Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER),
-            Antal = n(),
-            cpue = round(Antal/Effort,2), 
-            .groups="drop") %>%
-  bind_rows(zero.trips)
-# Create summary table for report
-cpue_tab <- cpuedata %>%
-  rename(Art = MALART,
-         Område = FANGOMR) %>%
-  dplyr::group_by(Art, Område, EFTERREGISTRERING) %>%
-  dplyr::summarize(N=n(), 
-                   Medel = round(mean(cpue),2),
-                   Median = round(median(cpue),2),
-                   SD = round(sd(cpue),2),
-                   .groups = "drop") %>% 
-  dplyr::filter(N>=10)
-  
-
-cap <- "CPUE per art och område. N anger antal fisketurer som ligger till grund för beräkningen (färre än 10 fisketurer är exkluderade)"
-knitr::kable(cpue_tab, caption = cap) 
-```
-
-```{r cpue_freq, fig.cap="Frekvensfördelning cpue", echo=FALSE, message=FALSE, fig.width=7, fig.height=5}
-
-#### Test plot: Skillnad i cpue med/utan efterreg?
-### Ser ut att kunna finnas något där faktiskt...? 
-#cpue_tab %>% 
-#  ggplot(aes(x=EFTERREGISTRERING, y=Median, col=Område)) + 
-#  geom_point(size=3) + 
-#  facet_wrap(~Art, scales="free") +
-#  scale_color_sporeg() + 
-#  geom_errorbar(aes(ymin=Median-SD, ymax=Median+SD))
-### Hur ser andel turer utan fångst ut:
-#cpuedata %>% mutate(bomtur = ifelse(cpue>0, 0, 1)) %>% count(MALART, EFTERREGISTRERING, bomtur) %>% pivot_wider(names_from=bomtur, #values_from=n) %>% mutate(andel.bom = `1`/(`1`+`0`))
-## för det mesta ganska lika. Låter därför detta vara avmarkerat så länge, men kvar i dokumentet inför framtiden.
-
-# Titta på fördelningen?
-fig.cpue.freq <- 
-  cpuedata %>% filter(MALART %in% unique(cpue_tab$Art)) %>%
-  ggplot(aes(cpue)) + 
-  geom_histogram(closed="left", color="black", boundary=0) + 
-  geom_freqpoly() + 
-  facet_wrap(~MALART, scales="free")  +
-  scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
-  xlab("CPUE per fisketur") + ylab("Antal") +
-  guides(fill = "none", alpha = "none") + ggthemes::theme_clean() +
-  theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) + 
-  scale_fill_sporeg()
-
-print(fig.cpue.freq)
-```
-
-```{r cpue-plot, fig.cap="Fångstindex per fiskedag för fisketurer efter gädda i Mälaren och på kusten, som ett exempel på spridningen i rådata", echo=FALSE, message=FALSE}
-
-## Plot catch index over time, by target species
-  cpue_per_date_plot <- 
-  cpuedata %>% 
-    #filter(MALART %in% unique(cpue_tab$Art)) %>% 
-    filter(MALART %in% c("Gädda", "Öring") & FANGOMR %in% c("Mälaren", "Kust")) %>% 
-    ggplot(aes(y = cpue, x=RESEDATUM, col=FANGOMR)) +
-    #geom_line(aes(col=ANVID), alpha = .5) +
-    geom_point(size=2, alpha = .3) + 
-    geom_smooth(se=F, method="loess") +
-    facet_grid(scales = "free_y", rows = vars(MALART)) + #, cols = vars(FANGOMR)) +
-    ## date_breaks måste anpassas till hur många dagar man har,
-    ##calc_date_breaks() försöker fixa
-    scale_x_date(date_breaks =
-                   calc_date_breaks(first_date, last_date) ,
-                 #labels=date_format('%B %-d, %Y'),
-                 date_labels = "%Y-%b-%d",
-                 guide = guide_axis(angle = 60), expand = expansion(mult = .02)) +
-    #scale_y_continuous(breaks = integer_breaks()) +
-    theme_bw() +
-    theme(legend.position = "bottom") +
-    labs(fill="", col="") +
-    ylab("Fångstindex") + xlab("") +
-  scale_color_sporeg()
-    
-  print(cpue_per_date_plot)
-  
-```
-
-
-```{r cpue-other1, fig.cap="Fångstindex för gädda i Mälaren, som en funktion av antal skarv observerat under fisketuren", echo=FALSE, message=FALSE}
-
-## datafix
-  foo <- cpuedata %>% filter(MALART == "Gädda" & FANGOMR == "Mälaren")
-
-  cpue_other_data <- filter(trips.other, HANDELSE=="Skarv") %>% 
-                     select(UUID, HANDELSE, ANTAL) %>% 
-                     left_join(foo, ., by="UUID") %>% 
-                     mutate(ANTAL = ifelse(is.na(ANTAL), 0, ANTAL),
-                            Kvartal = lubridate::quarter(RESEDATUM))
-  # Helår
-skarv.plot <- ggplot(cpue_other_data, aes(x = ANTAL, y = sqrt(cpue))) +
-  geom_point(size=3, alpha = .7, col="#56B4E9") + 
-  geom_smooth(se=T, method="lm", col="darkgrey") +
-  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("R2", "p", "n"))) +
-  theme_bw() +
-  ylab("Fångstindex (rot-transformerat)") + xlab("Antal skarv") 
-  
-print(skarv.plot)
-  
-```
-
-
-```{r cpue-other2, fig.cap="Fångstindex för gädda i Mälaren per kvartal (1-4), som en funktion av antal skarv observerat under fisketuren", echo=FALSE, message=FALSE}
-
-  # Per kvartal
-skarv.plot2 <- ggplot(cpue_other_data, aes(x = ANTAL, y = sqrt(cpue))) +
-  geom_point(size=3, alpha = .7, col="#56B4E9") + 
-  geom_smooth(se=T, method="lm", col="darkgrey") +
-  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("R2", "p", "n"))) +
-  theme_bw() +
-  ylab("Fångstindex (rot-transformerat)") + xlab("Antal skarv") +
-  facet_wrap(~Kvartal)
-  
-    
-print(skarv.plot2)
-  
-```
-

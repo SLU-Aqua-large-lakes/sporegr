@@ -23,10 +23,10 @@ params:
 
 
 ```{r setup, include=FALSE}
-### Set up control, only used locally! ##
-# Detta laddar alla funktioner från R/-mappen in i "Knit"-sessionen
-library(devtools)
-devtools::load_all() 
+### Set up control, unmask these lines when used locally ##
+## In that way all functions from the R/-folder is loaded into the knit-session
+#library(devtools) # unmask this
+#devtools::load_all() # unmask this
 ### End local set up
 
 # Load libraries

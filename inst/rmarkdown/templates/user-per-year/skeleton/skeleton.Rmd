@@ -23,13 +23,16 @@ params:
 
 
 ```{r setup, include=FALSE}
-# setwd("~/sporeg")
-# rm(list = ls())
+### Set up control, unmask these lines when used locally ##
+## In that way all functions from the R/-folder is loaded into the knit-session
+#library(devtools) # unmask this
+#devtools::load_all() # unmask this
+### End local set up
 
+# Load libraries
 library(sporegr)
 library(dplyr)
 library(ggplot2)
-library(SLUcolors)
 library(rJava)
 library(tidyr)
 
@@ -39,8 +42,6 @@ anvid <- params$anvid
 year_no <- params$year_no
 
 # Load and prep data using functions included in library(sporeg)
-# If needed change the path where APEX-exports are found.
-# APEX_options(root_folder = "C:/your/full/path")
 resa <- read_resa_clean()  %>% filter(ANVID == anvid, Year == year_no)
 resor_uuid <- resa %>% pull(UUID) %>% unique()
 ovrighandelse <- read_ovrighandelse_clean() %>%
@@ -187,7 +188,6 @@ kableExtra::kbl(fangst_per_art, caption = cap, booktabs = TRUE,
 ```
 
 ```{r map_overview, fig.cap="Rapporterad startposition för alla turer under perioden", fig.width=8, fig.height=8}
-pal2 <- c("#007681", "#509e2f", "#fce300", "#996017", "#ff585d", "#6ad1e3", "#53565a") # denna från SLU:s färgpalett
 trips <- resa
 catches <- fangst
 koords <- rbind(trips[,c("POSITIONE", "POSITIONN")], catches[,c("POSITIONE","POSITIONN")])
@@ -208,7 +208,7 @@ map.trips <- ggplot2::ggplot() +
   ggplot2::geom_point(data = filter(trips, POSITIONN >45, !MALART %in% c("Björkna", "Id", "Storspigg", "Asp")),
     aes(x = POSITIONE, y = POSITIONN, col=EFTERREGISTRERING), alpha=0.7,
     size = 3, show.legend = T) +
-  scale_color_manual(values = pal2[c(4,5)]) +
+  scale_color_manual(values = c("#509e2f", "#ff585d")) +
    ggplot2::theme_bw() +
   ggplot2::coord_cartesian() + 
   theme(legend.position="bottom")
@@ -225,10 +225,12 @@ map.catches <- ggplot2::ggplot() +
   ggplot2::geom_point(data = filter(catches, POSITIONN >45, !ARTBEST %in% c("Björkna", "Id", "Storspigg", "Asp")),
     aes(x = POSITIONE, y = POSITIONN, col=ARTBEST),
     size=3, alpha=0.6, show.legend = T) +
-  scale_color_manual(values = pal2) +
+  scale_color_sporeg_art() + 
+  xlab("") + ylab("") + 
   ggplot2::theme_bw() +
   ggplot2::coord_cartesian() + 
   theme(legend.position="bottom", legend.title=element_blank())
+
 print(map.catches)
 ```
 
@@ -247,46 +249,9 @@ per_date_plot <- fangst_resa %>%
   bind_rows(zero_trips %>% select(RESEDATUM, ARTBEST = MALART, Antal)) %>%
   arrange(RESEDATUM) %>%
   mutate(Date = factor(format(RESEDATUM, "%b-%d"), levels = trip_dates, ordered = TRUE)) %>%
-  ggplot(.) +
-  geom_col(mapping = aes(x = Date, y = Antal), fill="#56B4E9", color="black") +
-  facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
-  scale_x_discrete(breaks = calc_discrete_breaks(trip_dates),
-                   guide = guide_axis(angle = 60)) +
-  ## date_breaks måste anpassas till hur många dagar man har,
-  ## calc_date_breaks() försöker fixa
-##  scale_x_date(date_breaks = 
-##                 calc_date_breaks(first_date, last_date),
-##               date_labels = "%b-%d",
-##               guide = guide_axis(angle = 60), expand = c(0, 0)) +
-  scale_y_continuous(breaks = integer_breaks()) +
-  theme_bw() +
-  theme(legend.position = "none") +
-  xlab("")
-
-if (have_fangst) {
-  print(per_date_plot)
-} else {
-  print("Inga fångster")
-}
-```
-
-
-```{r per-date-plot, fig.cap = "Fångst per fisketur"}
-#Create plot with catch per day. One panel per species caught
-calc_discrete_breaks <- function(x, max_breaks = 30) {
-  mb <- min(length(x), max_breaks)
-  res <- x[seq(from = 1, to = length(x), by = floor(length(x) / mb))]
-  return(res)
-}
-
-per_date_plot <- fangst_resa %>%
-  group_by(RESEDATUM, ARTBEST) %>%
-  summarise(Antal = n(), .groups = "drop") %>% 
-  bind_rows(zero_trips %>% select(RESEDATUM, ARTBEST = MALART, Antal)) %>%
-  arrange(RESEDATUM) %>%
-  mutate(Date = factor(format(RESEDATUM, "%b-%d"), levels = trip_dates, ordered = TRUE)) %>%
-  ggplot(.) +
-  geom_col(mapping = aes(x = Date, y = Antal), fill="#56B4E9", color="black") +
+  ggplot(., aes(x = Date, y = Antal, fill=ARTBEST)) +
+  geom_col(col="black") +
+  scale_fill_sporeg_art() +
   facet_grid(scales = "free_y", rows = vars(ARTBEST)) +
   scale_x_discrete(breaks = calc_discrete_breaks(trip_dates),
                    guide = guide_axis(angle = 60)) +
@@ -321,7 +286,7 @@ cpuedata <- fangst_resa %>% filter(MALART==ARTBEST) %>%
 ## Plot catch index over time, by target species
 if (nrow(cpuedata) > 0) {
   cpue_per_date_plot <- cpuedata %>%
-    ggplot(., aes(x = RESEDATUM, y = cpue, fill = FANGOMR)) +
+    ggplot(., aes(x = RESEDATUM, y = cpue, col = FANGOMR)) +
     geom_line(aes(col=FANGOMR), alpha = .5) +
     geom_point(size=2, aes(col=FANGOMR), alpha = .8) + 
     facet_grid(scales = "free_y", rows = vars(MALART)) +
@@ -332,11 +297,10 @@ if (nrow(cpuedata) > 0) {
                  date_labels = "%b-%d",
                  guide = guide_axis(angle = 60), expand = expansion(mult = .02)) +
     #scale_y_continuous(breaks = integer_breaks()) +
-    scale_color_manual(values = SLUcolors::SLUpalette("wong_234516", color_names = FALSE)) +
+    scale_color_sporeg() + 
     theme_bw() +
     theme(legend.position = "bottom") +
-    labs(fill="Område",
-         col="Område") +
+    labs(col="Område") +
     ylab("Fångstindex") + xlab("")
   print(cpue_per_date_plot)
 } else {
@@ -353,8 +317,9 @@ length_dist <- fangst %>%
   filter(n > 9)
   
 if (nrow(length_dist) > 0) {
-  length_plot <- ggplot(data = length_dist, mapping = aes(x = LANGD)) +
-    geom_histogram( binwidth = 2.5, boundary=0, closed="left", fill="#56B4E9",color="black") +
+  length_plot <- ggplot(data = length_dist, mapping = aes(x = LANGD, fill=ARTBEST)) +
+    geom_histogram( binwidth = 2.5, boundary=0, closed="left",color="black") +
+    scale_fill_sporeg_art() + 
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
     facet_grid(scales = "free", rows = vars(ARTBEST)) +
     xlab("Längd (cm)") + ylab("Antal fiskar") +

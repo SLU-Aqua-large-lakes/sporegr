@@ -9,9 +9,17 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+### Set up control, unmask these lines when used locally ##
+## In that way all functions from the R/-folder is loaded into the knit-session
+#library(devtools) # unmask this
+#devtools::load_all() # unmask this
+### End local set up
+
+### Set ut
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(warning = FALSE)
 
+# Load libraries
 library(dplyr)
 library(tidyr)
 library(readxl)
@@ -20,6 +28,7 @@ library(sporegr)
 library(ggthemes)
 library(janitor)
 
+# Load user data
 users <- sporegr::read_anvlista()
 nusers <- nrow(users)
 

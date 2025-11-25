@@ -351,6 +351,7 @@ resa_catch <- t1b %>%
             Antal = Antal) %>% 
   group_by(Namn, Datum, Område, Art) %>%
   summarize(Antal = sum(Antal)) %>%   
+  arrange(Datum) %>% 
   tidyr::pivot_wider(., names_from=Art, values_from=Antal, values_fill=0)
 
 cap <- paste0("Fångst per fisketur")

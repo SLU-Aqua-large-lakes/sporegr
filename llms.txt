@@ -1,0 +1,57 @@
+# Package sporegr
+
+# sporegr
+
+This package will help you work with data from the Spöreg mobile app.
+The package contains functions to read (and do some cleanup) of data
+files exported from predefined queries in APEX (datastore).
+
+I also contains rmarkdown templates for some reports. This package is
+probably not useful for the general public.
+
+To install try remotes::install_github(“SLU-Aqua-large-lakes/sporegr”,
+build_vignettes = TRUE)
+
+# Package index
+
+## All functions
+
+- [`APEX_options()`](https://kagervall.github.io/sporegr/reference/APEX_options.md)
+  : Set or get options for reading APEX Spöreg data
+- [`calc_date_breaks()`](https://kagervall.github.io/sporegr/reference/calc_date_breaks.md)
+  : calc_date_breaks
+- [`fix_fangst_missing_fangstdattid()`](https://kagervall.github.io/sporegr/reference/fix_fangst_missing_fangstdattid.md)
+  : Fix missing datetime on fangster
+- [`integer_breaks()`](https://kagervall.github.io/sporegr/reference/integer_breaks.md)
+  : integer_breaks
+- [`minutes2HHMM()`](https://kagervall.github.io/sporegr/reference/minutes2HHMM.md)
+  : Minutes to HH:MM
+- [`read_anvlista()`](https://kagervall.github.io/sporegr/reference/read_anvlista.md)
+  : Read a file with registered sporeg users
+- [`read_fangst_clean()`](https://kagervall.github.io/sporegr/reference/read_fangst_clean.md)
+  : Read a file with APEX export of fångster from Spöreg database and do
+  some cleanup
+- [`read_ovrighandelse_clean()`](https://kagervall.github.io/sporegr/reference/read_ovrighandelse_clean.md)
+  : Read a file with APEX export of Övrighändelse from Spöreg database
+  and do some cleanup
+- [`read_resa_clean()`](https://kagervall.github.io/sporegr/reference/read_resa_clean.md)
+  : Read a file with APEX export of resor from Spöreg database and do
+  some cleanup
+- [`sporegApp()`](https://kagervall.github.io/sporegr/reference/sporegApp.md)
+  : sporegApp
+- [`sporeg_bbox()`](https://kagervall.github.io/sporegr/reference/sporeg_bbox.md)
+  : sporeg_bbox
+- [`sporeg_points()`](https://kagervall.github.io/sporegr/reference/sporeg_points.md)
+  : sporeg_points
+- [`scale_color_sporeg()`](https://kagervall.github.io/sporegr/reference/sporegr_scales.md)
+  [`scale_fill_sporeg()`](https://kagervall.github.io/sporegr/reference/sporegr_scales.md)
+  [`scale_color_sporeg_art()`](https://kagervall.github.io/sporegr/reference/sporegr_scales.md)
+  [`scale_fill_sporeg_art()`](https://kagervall.github.io/sporegr/reference/sporegr_scales.md)
+  : Create discrete scales for sporegr
+
+# Articles
+
+### All vignettes
+
+- [Creating reports for the users of
+  Spöreg](https://kagervall.github.io/sporegr/articles/user-reports.md):

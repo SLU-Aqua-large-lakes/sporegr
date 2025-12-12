@@ -15,7 +15,7 @@ output:
 #devtools::load_all() # unmask this
 ### End local set up
 
-### Set ut
+### Set up
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(warning = FALSE)
 
@@ -331,6 +331,7 @@ Fig1 <- catches.trips %>% filter(ARTBEST %in% c("Gädda")) %>%  # "Abborre", "Ö
     geom_histogram(binwidth = 5, boundary=0, closed="left",color="black") +
     scale_fill_sporeg() + 
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    scale_x_continuous(breaks = scales::breaks_pretty(n = 7)) +
     xlab("Längd (cm)") + ylab("Antal fiskar") +
     guides(fill = "none", alpha = "none") + ggthemes::theme_clean() +
     theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) +
@@ -350,6 +351,7 @@ Fig2 <- catches.trips %>% filter(ARTBEST %in% c("Öring"),
     ggplot(., aes(x=LANGD, fill=FANGOMR)) +
     geom_histogram(binwidth = 3, boundary=0, closed="left", color="black") +
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    scale_x_continuous(breaks = scales::breaks_pretty(n = 7)) +
     scale_fill_sporeg() + 
     xlab("Längd (cm)") + ylab("Antal fiskar") +
     guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
@@ -370,6 +372,7 @@ Fig3 <- catches.trips %>% filter(ARTBEST %in% c("Abborre"),
     ggplot(., aes(x=LANGD, fill=FANGOMR)) +
     geom_histogram(binwidth = 5, boundary=0, closed="left", color="black") +
     scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+    scale_x_continuous(breaks = scales::breaks_pretty(n = 7)) +
     scale_fill_sporeg() +
     xlab("Längd (cm)") + ylab("Antal fiskar") +
     guides(fill = "none", alpha = "none") + ggthemes::theme_clean() + 
@@ -443,14 +446,248 @@ print(Fig6)
 
 
 \newpage
+## Fångstindex
+Fångst per ansträngning (cpue) har beräknats som antal fiskar per spötimme, där spötimme = antal spön * antal timmar. Beräkningen inkluderar endast turer där fångstart = målart och redovisas som genomsnitt per tur, med tillhörande variation (mätt som en standardavvikelse).
+
+```{r cpue_table, echo=FALSE, message=FALSE}
+## Create a table for cpue by species and area
+
+## First create a table of trips with zero catch, include EFTERREG to check if difference
+zero.trips <- trips %>%
+  select(UUID, FANGOMR, ANVID, Year, Quarter, Month, Day, RESEDATUM, MALART, EFTERREGISTRERING, FISKEMINUTER, ANTALPERSONER) %>%
+    mutate(Effort = FISKEMINUTER/60 * ANTALPERSONER) %>%
+  left_join(catches %>% group_by(UUID) %>% summarise(Antal = n())) %>%
+  filter(is.na(Antal)) %>%
+  mutate(Antal = 0, cpue = 0) %>%
+  select(-FISKEMINUTER, -ANTALPERSONER)
+
+# To look at catch index we need to take MALART and FANGOMR into account, which only include trips with catch
+# That's why we add zero trips in the end
+cpuedata <- catches.trips %>% filter(MALART==ARTBEST) %>%
+  group_by(UUID, FANGOMR, ANVID,Year, Quarter, Month, Day, RESEDATUM, MALART, EFTERREGISTRERING) %>%
+  summarise(Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER),
+            Antal = n(),
+            cpue = round(Antal/Effort,2), 
+            .groups="drop") %>%
+  bind_rows(zero.trips)
+# Create summary table for report
+cpue_tab <- cpuedata %>%
+  rename(Art = MALART,
+         Område = FANGOMR) %>%
+  dplyr::group_by(Art, Område) %>%
+  dplyr::summarize(N=n(), # Antal fisketurer i beräkningen
+                   Nollturer = round(sum(ifelse(cpue==0, 1, 0)) / N *100, 0), # Andel turer utan fångst, NOTERA - i PROCENT
+                   Medel = round(mean(cpue),2),
+                   SD = round(sd(cpue),2),
+                   Median = round(median(cpue),2),
+                   q25 = round(quantile(cpue, probs=0.25, na.rm=T),2),
+                   q75 = round(quantile(cpue, probs=0.75, na.rm=T),2),
+                   .groups = "drop") %>% 
+  dplyr::filter(N>=10)
+
+#### Catch index above threshold # Not used for output now
+cpueX <- catches.trips %>% filter(MALART==ARTBEST, 
+                         LANGD >60) %>%   ## ADJUST LENGTH HERE
+  group_by(UUID, FANGOMR, ANVID,Year, Quarter, Month, Day, RESEDATUM, MALART, EFTERREGISTRERING) %>%
+  summarise(Effort = max(FISKEMINUTER)/60 * max(ANTALPERSONER),
+            Antal = n(),
+            cpue = round(Antal/Effort,2), 
+            .groups="drop") %>%
+  bind_rows(zero.trips)
+cpueXX <- cpueX %>%
+  rename(Art = MALART,
+         Område = FANGOMR) %>%
+  dplyr::group_by(Art, Område) %>%
+  dplyr::summarize(N=n(), # Antal fisketurer i beräkningen
+                   Nollturer = round(sum(ifelse(cpue==0, 1, 0)) / N *100, 0), # Andel turer utan fångst, NOTERA - i PROCENT
+                   Median = round(median(cpue),2),
+                   q25 = quantile(cpue, probs=0.25, na.rm=T, digits=2),
+                   q75 = quantile(cpue, probs=0.75, na.rm=T, digits=2),
+                   .groups = "drop") %>% 
+  dplyr::filter(N>=10)
+
+
+cap <- "CPUE per art och område. N anger antal fisketurer och nollturer andelen (%) utan fångst (färre än 10 fisketurer är exkluderade)."
+knitr::kable(cpue_tab, caption = cap) 
+```
+
+```{r cpue_freq, fig.cap="Frekvensfördelning cpue", echo=FALSE, message=FALSE, fig.width=7, fig.height=5}
+fig.cpue.freq <- 
+  cpuedata %>% filter(MALART %in% unique(cpue_tab$Art),
+                      !UUID == "2b189a49-1a98-4216-bf88-57cc0d89d0f5", 
+                      !UUID == "ee4ecf9b-d71f-4884-b916-5924d1a42883", 
+                      ) %>% # temporär fix innan effort justerats i rådata
+  ggplot(aes(cpue)) + 
+  geom_histogram(closed="left", color="black", boundary=0, aes(fill=MALART)) + 
+  facet_wrap(~MALART, scales="free")  +
+  scale_y_continuous(labels = scales::label_number(), expand=expansion(mult=c(0,0.05))) +
+  xlab("CPUE per fisketur") + ylab("Antal") +
+  guides(fill = "none", alpha = "none") + ggthemes::theme_clean() +
+  theme(legend.background = element_rect(color = NA), plot.background=element_rect(color=NA)) + 
+  scale_fill_sporeg_art()
+
+print(fig.cpue.freq)
+```
+
+```{r cpue_bycatch, fig.cap="Fångstindex per område och målart, inklusive bifångst", echo=FALSE, message=FALSE, fig.width=7, fig.height=7}
+
+## Check cpue for certain specific type of fisheries - ie including both targeted catch and by-catch
+## To see by-catches, run:
+# table(catches.trips$MALART, catches.trips$ARTBEST)
+
+## Beräkningen behöver cpue i brett format - vilket får göras i flera steg:
+# Beräkna fångsten per resa, brett:
+fangst.antal <- 
+  catches %>% 
+  group_by(UUID, ARTBEST) %>% 
+  summarize(Antal = n()) %>% 
+  tidyr::pivot_wider(names_from=ARTBEST, 
+                     values_from=Antal, 
+                     values_fill=0)
+# Beräkna effort och lägg till fångsten
+fangst.antal.effort <- 
+  trips %>%
+  mutate(Effort = FISKEMINUTER/60 * ANTALPERSONER) %>% 
+  select(UUID, Effort) %>% 
+  dplyr::left_join(fangst.antal, by="UUID") %>%
+  mutate(across(everything(), ~replace_na(., 0))) # ge också bom-turerna nollor för fångsten
+# beräkna över kolumner och behåll endast cpue 
+cpue.uuid <- 
+  fangst.antal.effort %>% 
+  mutate(across(3:last_col(),  # Välj kolumner från den 3:e till den sista
+                ~ . / Effort,   # Dela varje vald kolumns värde med kolumnen 'Effort'
+                .names = "CPUE_{col}")) %>% # Döp de nya kolumnerna till CPUE_
+  select(UUID, Effort, starts_with("CPUE")) # Behåll endast cpue-kolumnerna (kan skippa .names raden, men behöver namnen senare) 
+
+# lägg till cpue till trips
+cpuedata2 <- 
+  trips %>% 
+#  mutate(MALARTSGRUPP = case_when(
+#    MALART %in% c("Abborre", "Gädda", "Gös") ~ "Abborre_gädda_gös",
+#    MALART %in% c("Lax", "Öring", "Röding") ~ "Lax_öring_röding",
+#    TRUE ~ "Other")) %>%
+  dplyr::left_join(cpue.uuid, by="UUID")
+
+## Nu kan cpue av målart och bifångst analyseras:
+
+# cpue table 2 wide
+cpue_tab2_wide <- cpuedata2 %>%
+  dplyr::group_by(MALART, FANGOMR) %>%   ## kan lägga till fler saker här, som år, efterreg.. 
+  dplyr::summarize(N = n(), 
+                   across(.cols = starts_with("CPUE_"), 
+                          .fns = list(
+                            medel = mean,
+                            median = median,
+                            sd = sd
+                            #N = ~ n()  # Räkna antalet rader i varje grupp
+                            ),
+                          .names = "{col}_{fn}"), # Döp nya kolumner: 'CPUE_Art_funktion'
+                   .groups = "drop") %>% 
+    filter(N > 10) # Filtrera på antal turer som för första cpue-tabellen
+
+# cpue table 2 long - också i långt format för att lättare kunna plotta och analysera:
+cpue_tab2_long <- cpue_tab2_wide %>% 
+  pivot_longer(cols = 4:last_col(), 
+               values_to = "värde", 
+               names_to = "variabel") %>% 
+  separate(col = variabel,
+    into = c("Enhet", "Fångstart", "Variabel"), # Namn på de nya kolumnerna
+    sep = "_",           # Separatorn (understrecket)
+    extra = "merge")      # Hantera fallet där det finns fler än 2 understreck (t.ex. vid Lax_öring_röding)
+
+cpue_tab2_long2 <- cpue_tab2_long %>% pivot_wider(names_from=Variabel, values_from=värde)
+
+## Nu kan bifångster analyseras
+bycatch.overview <- 
+  cpue_tab2_long2 %>% 
+  filter(median>0) %>%  # filtrera bort arter som inte fångats
+  ggplot(., aes(x=Fångstart, y=median, col=FANGOMR)) + 
+  geom_point(size=2) + 
+  facet_grid(cols=vars(FANGOMR), scales="free", rows=vars(MALART)) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = "none") +
+  ylab("median cpue") +
+  scale_color_sporeg()
+
+# Plockar ut Vättern här för presentation också:
+bycatch.vattern <- 
+  cpue_tab2_long2 %>% 
+  filter(median>0, FANGOMR=="Vättern") %>%  
+  ggplot(., aes(x=Fångstart, y=median, col=Fångstart)) + 
+  geom_point(size=2) + 
+  facet_grid(scales="free", cols=vars(MALART)) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = "none") +
+  ylab("Fångstindex (median)") +
+  scale_color_sporeg_art() + 
+  ylim(0,0.1)
+
+
+print(bycatch.overview)
+
+```
+
+
+```{r cpue-plot, fig.cap="Fångstindex per fiskedag som ett exempel på variationen", echo=FALSE, message=FALSE, fig.width=7, fig.height=5}
+
+## Plot catch index over time, by target species
+  cpue_per_date_plot <- 
+  cpuedata %>% 
+    #filter(MALART %in% unique(cpue_tab$Art)) %>% 
+    filter(MALART %in% c("Gädda", "Öring") & FANGOMR %in% c("Mälaren", "Kust")) %>% 
+    ggplot(aes(y = cpue, x=RESEDATUM, col=FANGOMR)) +
+    #geom_line(aes(col=ANVID), alpha = .5) +
+    geom_point(size=2, alpha = .3) + 
+    geom_smooth(se=F, method="loess") +
+    facet_grid(scales = "free_y", rows = vars(MALART)) + #, cols = vars(FANGOMR)) +
+    ## date_breaks måste anpassas till hur många dagar man har,
+    ##calc_date_breaks() försöker fixa
+    scale_x_date(date_breaks =
+                   calc_date_breaks(first_date, last_date) ,
+                 #labels=date_format('%B %-d, %Y'),
+                 date_labels = "%Y-%b-%d",
+                 guide = guide_axis(angle = 60), expand = expansion(mult = .02)) +
+    #scale_y_continuous(breaks = integer_breaks()) +
+    theme_bw() +
+    theme(legend.position = "bottom") +
+    labs(fill="", col="") +
+    ylab("Fångstindex") + xlab("") +
+  scale_color_sporeg()
+    
+  print(cpue_per_date_plot)
+  
+```
+
+```{r cpue-other1, fig.cap="Fångstindex för gädda som en funktion av antal skarv observerat under fisketuren", echo=FALSE, message=FALSE, fig.height=8, fig.width=8}
+
+## datafix
+  foo <- cpuedata %>% filter(MALART == "Gädda") # & FANGOMR == "Mälaren")
+
+  cpue_other_data <- filter(trips.other, HANDELSE=="Skarv") %>% 
+                     select(UUID, HANDELSE, ANTAL) %>% 
+                     left_join(foo, ., by="UUID") %>% 
+                     mutate(ANTAL = ifelse(is.na(ANTAL), 0, ANTAL),
+                            Kvartal = lubridate::quarter(RESEDATUM))
+  # Helår
+skarv.plot <- ggplot(cpue_other_data, aes(x = ANTAL, y = sqrt(cpue))) +
+  geom_point(size=3, alpha = .7, col="#56B4E9") + 
+  geom_smooth(se=T, method="lm", col="darkgrey") +
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("R2", "p", "n"))) +
+  theme_bw() +
+  facet_wrap(~FANGOMR, scales="free") + 
+  ylab("Fångstindex (rot-transformerat)") + xlab("Antal skarv") 
+  
+print(skarv.plot)
+```
+
+
+
+\newpage
 ## Kartor
  
 ```{r map_overview, echo=FALSE, fig.cap="Rapporterade startpositioner för alla turer under perioden", fig.width=8, fig.height=8}
-# need extra step to handle some coordinates that are clearly wrong..
-pal <- c("#56B4E9", "#009E73", "#F0E442", "#0072B2", "#E69F00", "#D55E00") # denna från fiskbarometerns instruktioner
-pal2 <- c("#007681", "#509e2f", "#fce300", "#996017", "#ff585d", "#6ad1e3", "#53565a") # denna från SLU:s färgpalett
-
-
 # Behöver ge samma namn på koordinaterna för att kunna binda ihop positioner från resa och fångst:
 catches.trips$POSITIONE <- catches.trips$POSITIONE.x
 catches.trips$POSITIONN <- catches.trips$POSITIONN.x
